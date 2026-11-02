@@ -1,6 +1,7 @@
 import type { FunctionReturnType } from "convex/server";
 import type { ReactNode } from "react";
 import type { api } from "@/convex/_generated/api";
+import type { LoanEventType } from "@/convex/lib/validators";
 import { formatRange, localToday, timeAgo } from "@/lib/format";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 
@@ -9,7 +10,7 @@ export type LoanView = FunctionReturnType<typeof api.loans.myRequests>[number];
 function statusBadge(loan: LoanView): [BadgeTone, string] {
   switch (loan.status) {
     case "pending":
-      return ["amber", "Waiting for reply"];
+      return ["amber", "Pending"];
     case "approved":
       if (loan.overdue) return ["red", "Overdue"];
       return loan.startDate > localToday()
@@ -24,10 +25,18 @@ function statusBadge(loan: LoanView): [BadgeTone, string] {
   }
 }
 
-const activityLabels = {
-  request_notification: "Notification",
-  overdue_reminder: "Overdue reminder",
-} as const;
+const emailLabels: Record<LoanEventType, string> = {
+  "loan.requested": "Request email",
+  "loan.approved": "Approval email",
+  "loan.declined": "Decline email",
+  "loan.cancelled": "Cancellation email",
+  "loan.returned": "Return email",
+};
+
+function activityLabel(event: LoanView["activity"][number]) {
+  if (event.kind === "overdue_reminder") return "Overdue reminder";
+  return event.eventType ? emailLabels[event.eventType] : "Notification";
+}
 
 export function LoanCard({
   loan,
@@ -64,7 +73,7 @@ export function LoanCard({
         <ul className="mt-3 space-y-1 border-t border-line pt-3 text-xs text-ink/50">
           {loan.activity.map((event) => (
             <li key={`${event.kind}-${event.occurredAt}`}>
-              {activityLabels[event.kind]}{" "}
+              {activityLabel(event)}{" "}
               {event.status === "sent" ? (
                 "sent"
               ) : (

@@ -41,11 +41,26 @@ export async function getRecentActivity(ctx: QueryCtx, loanId: Id<"loans">) {
     .withIndex("by_loan", (q) => q.eq("loanId", loanId))
     .order("desc")
     .take(3);
-  return events.map(({ kind, status, occurredAt }) => ({
-    kind,
-    status,
-    occurredAt,
-  }));
+  return Promise.all(
+    events.map(async ({ kind, status, occurredAt, idempotencyKey }) => {
+      // Notification keys are "notify:<deliveryId>", which tells us which
+      // loan event the email was about.
+      const deliveryId =
+        kind === "request_notification"
+          ? ctx.db.normalizeId(
+              "webhookDeliveries",
+              idempotencyKey.slice("notify:".length),
+            )
+          : null;
+      const delivery = deliveryId ? await ctx.db.get(deliveryId) : null;
+      return {
+        kind,
+        status,
+        occurredAt,
+        eventType: delivery?.type ?? null,
+      };
+    }),
+  );
 }
 
 export async function enqueueLoanEvent(

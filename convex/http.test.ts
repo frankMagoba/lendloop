@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api } from "./_generated/api";
 import { signedHeaders } from "./lib/signature";
 import {
   TODAY,
@@ -162,6 +163,32 @@ describe("POST /n8n/automation-events", () => {
       ctx.db.query("automationEvents").collect(),
     );
     expect(rows).toMatchObject([{ status: "sent" }]);
+  });
+
+  test("shows which loan event a notification was about", async () => {
+    const t = setup();
+    const { loanId, borrower } = await overdueLoan(t);
+    const deliveryId = await t.run((ctx) =>
+      ctx.db.insert("webhookDeliveries", {
+        loanId,
+        type: "loan.approved",
+        recipientId: borrower.userId,
+        status: "delivered",
+        attempts: 1,
+      }),
+    );
+
+    await postEvent(t, {
+      idempotencyKey: `notify:${deliveryId}`,
+      loanId,
+      kind: "request_notification",
+      status: "sent",
+    });
+
+    const [loan] = await borrower.as.query(api.loans.myRequests, {});
+    expect(loan.activity).toMatchObject([
+      { kind: "request_notification", eventType: "loan.approved" },
+    ]);
   });
 
   test("rejects a signed body that was altered in transit", async () => {

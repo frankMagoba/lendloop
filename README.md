@@ -202,7 +202,7 @@ npm run typecheck    # Next.js and Convex
 npm run lint
 ```
 
-The 49 tests cover access rules for every role, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no UI tests yet.
+The 50 tests cover access rules for every role, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
 
 ## What I'd change for production
 
