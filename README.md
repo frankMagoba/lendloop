@@ -4,6 +4,10 @@ A tool-lending board for neighbours. People list tools they're willing to lend, 
 
 Built with Next.js 16 (App Router), Clerk, Convex, n8n and TypeScript.
 
+| The board                                                                      | Asking for dates                                       | Admin                                                                     |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------- |
+| ![All tools with availability and category filter](docs/screenshots/board.png) | ![Borrow request dialog](docs/screenshots/request.png) | ![Admin panel with neighbours and every loan](docs/screenshots/admin.png) |
+
 - [Running it locally](#running-it-locally)
 - [Environment variables](#environment-variables)
 - [Architecture](#architecture)
@@ -28,7 +32,19 @@ Leave it running. To run the backend on your machine instead of in the cloud, us
 
 **2. Connect Clerk**
 
-In the Clerk dashboard, open Integrations → Convex and activate it. That creates the `convex` JWT template the app asks for. Then:
+The app asks Clerk for a session token from a JWT template named `convex`. In the Clerk dashboard, go to Configure → JWT templates → New template. Pick the Convex preset if it's offered. Otherwise choose Blank, name it `convex` and use these claims:
+
+```json
+{
+  "aud": "convex",
+  "name": "{{user.full_name}}",
+  "given_name": "{{user.first_name}}",
+  "email": "{{user.primary_email_address}}",
+  "email_verified": "{{user.email_verified}}"
+}
+```
+
+Convex checks `aud`. The app keeps `given_name` and `email`, and without an email a user simply gets no notifications. Copy the keys and the Frontend API URL from Configure → API keys, then:
 
 ```bash
 cp .env.example .env.local       # keep the Convex lines convex dev wrote
@@ -68,6 +84,8 @@ Sign in once, then make yourself an admin from the CLI:
 ```bash
 npx convex run users:setRole '{"email": "you@example.com", "role": "admin"}'
 ```
+
+To try both sides of a loan, use a second browser profile or a private window. Clerk development instances accept test addresses like `owner+clerk_test@example.com`, and when Clerk asks for an email code on those addresses, `424242` works without a real inbox.
 
 To fire the overdue reminder without waiting for 09:00, open the "LendLoop: daily overdue reminders" workflow in n8n and run it manually. The seeded tent loan is two days overdue, so Priya gets an email.
 
@@ -115,7 +133,7 @@ flowchart LR
 | `webhookDeliveries` | Outbox for calls to n8n: event type, loan, recipient, attempts, last error                                              |
 | `automationEvents`  | What n8n reported back, keyed by an idempotency key. Shown on each loan as "Reminder sent 2 days ago"                   |
 
-Availability isn't stored. It's worked out from approved loans and today's date: a tool is "on loan" once an approved loan has started, and overdue once its end date has passed. Approving a request that overlaps another approved loan is refused.
+Availability isn't stored. It's worked out from approved loans and today's date: a tool is "on loan" once an approved loan has started, and overdue once its end date has passed. Approving a request that overlaps another approved loan is refused, and so is any approval while the tool is still out on an overdue loan, since it hasn't come back yet.
 
 **Loan events.** Each mutation that changes a loan writes an outbox row and schedules `notifications.deliver` in the same transaction. If the mutation rolls back, no notification goes out. The action builds the payload at send time, signs it and posts it to n8n. The workflow checks the signature against the raw request body, answers `202` right away, emails the right person, and posts the result back to `/n8n/automation-events`.
 
@@ -174,6 +192,8 @@ Each direction has its own secret, so a leak on one side doesn't let someone for
 
 **Abuse limits.** A borrower can have at most ten pending requests and one per tool. Loans are capped at 30 days.
 
+**Browser hardening.** Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a strict referrer policy, a permissions policy that turns off camera, microphone and location, and HSTS. `X-Powered-By` is switched off. Actions that can't be undone (removing a listing, cancelling, declining, marking returned) go through a confirm dialog that names what happens next, such as who gets emailed.
+
 ## Reliability and error handling
 
 Convex → n8n:
@@ -202,7 +222,9 @@ npm run typecheck    # Next.js and Convex
 npm run lint
 ```
 
-The 50 tests cover access rules for every role, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
+CI runs lint, typecheck and the tests on every push and pull request (`.github/workflows/ci.yml`).
+
+The 51 tests cover access rules for every role, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
 
 ## What I'd change for production
 
@@ -213,5 +235,6 @@ The 50 tests cover access rules for every role, the loan lifecycle and date vali
 - **Scale.** Listing queries read up to 200 rows and work out availability per tool. Past a few thousand tools I'd paginate the board, store an availability field updated by the loan mutations, and paginate `/n8n/overdue-loans`.
 - **Observability.** Send Convex logs and n8n error alerts to Sentry or Datadog rather than email, and alert on the count of `failed` deliveries.
 - **Handover.** Once a loan is approved, the two neighbours still have to arrange pickup outside the app. I'd add short per-loan messages instead of revealing email addresses to each other.
+- **Content Security Policy.** Add a nonce-based CSP. I left it out here because Clerk's scripts and the Convex websocket need allowlisting per environment, and a wrong policy breaks sign-in quietly.
 - **Abuse.** Rate-limit mutations per user (`@convex-dev/rate-limiter`) and add a way to report a listing.
 - **Tests.** Playwright runs through the main flows against a preview deployment, and a CI job that runs lint, typecheck and tests on every PR.
