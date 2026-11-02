@@ -1,2 +1,6 @@
 convex/_generated
 package-lock.json
+.convex
+.next
+n8n/workflows
+n8n/credentials
