@@ -27,3 +27,20 @@ export function HomeCallToAction() {
     </>
   );
 }
+
+export function AvailableNowHint() {
+  return (
+    <p className="mt-1 text-sm text-ink/60">
+      <Unauthenticated>
+        Sign in to see who&apos;s lending and to ask for dates.
+      </Unauthenticated>
+      <Authenticated>
+        Open{" "}
+        <Link href="/tools" className="underline">
+          the board
+        </Link>{" "}
+        to see who&apos;s lending and to ask for dates.
+      </Authenticated>
+    </p>
+  );
+}

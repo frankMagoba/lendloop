@@ -1,4 +1,7 @@
-import { HomeCallToAction } from "@/components/home-call-to-action";
+import {
+  AvailableNowHint,
+  HomeCallToAction,
+} from "@/components/home-call-to-action";
 import { PublicToolList } from "@/components/public-tool-list";
 
 export default function Home() {
@@ -21,9 +24,7 @@ export default function Home() {
 
       <section>
         <h2 className="text-lg font-semibold">Available now</h2>
-        <p className="mt-1 text-sm text-ink/60">
-          Sign in to see who&apos;s lending and to ask for dates.
-        </p>
+        <AvailableNowHint />
         <div className="mt-4">
           <PublicToolList />
         </div>
