@@ -8,6 +8,7 @@ import { useAccountReady } from "@/components/account";
 import { LoanCard, LoanSection } from "@/components/loan-card";
 import { Person } from "@/components/person";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { FormError } from "@/components/ui/field";
 import { EmptyState, LoadingCards, PageHeader } from "@/components/ui/states";
 
@@ -18,6 +19,7 @@ export function IncomingRequests() {
   const decline = useMutation(api.loans.decline);
   const markReturned = useMutation(api.loans.markReturned);
   const { pending, error, run } = usePendingAction();
+  const [confirm, confirmDialog] = useConfirm();
 
   const waiting = loans?.filter((loan) => loan.status === "pending") ?? [];
   const lent = loans?.filter((loan) => loan.status === "approved") ?? [];
@@ -60,8 +62,15 @@ export function IncomingRequests() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled={pending}
-                      onClick={() => run(() => decline({ loanId: loan._id }))}
+                      onClick={() =>
+                        confirm({
+                          title: `Decline ${loan.borrower.firstName}'s request?`,
+                          description: `They get an email saying you can't lend the ${loan.tool.name} for those dates.`,
+                          confirmLabel: "Decline",
+                          destructive: true,
+                          action: () => decline({ loanId: loan._id }),
+                        })
+                      }
                     >
                       Decline
                     </Button>
@@ -93,9 +102,13 @@ export function IncomingRequests() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={pending}
                     onClick={() =>
-                      run(() => markReturned({ loanId: loan._id }))
+                      confirm({
+                        title: `Is the ${loan.tool.name} back with you?`,
+                        description: `This closes the loan and emails ${loan.borrower.firstName} a confirmation.`,
+                        confirmLabel: "Mark returned",
+                        action: () => markReturned({ loanId: loan._id }),
+                      })
                     }
                   >
                     <PackageCheck aria-hidden />
@@ -118,6 +131,7 @@ export function IncomingRequests() {
           />
         </div>
       )}
+      {confirmDialog}
     </>
   );
 }

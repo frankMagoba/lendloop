@@ -8,13 +8,12 @@ import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CATEGORIES, type Category } from "@/convex/lib/validators";
-import { usePendingAction } from "@/lib/use-pending-action";
 import { useAccountReady } from "@/components/account";
 import { CategoryFilter } from "@/components/category-filter";
 import { RequestDialog } from "@/components/request-dialog";
 import { ToolCard } from "@/components/tool-card";
 import { Button } from "@/components/ui/button";
-import { FormError } from "@/components/ui/field";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState, LoadingCards } from "@/components/ui/states";
 
 function parseCategory(value: string | null): Category | null {
@@ -30,7 +29,7 @@ export function ToolsBoard() {
   );
   const me = useQuery(api.users.me);
   const removeTool = useMutation(api.tools.remove);
-  const removal = usePendingAction();
+  const [confirm, confirmDialog] = useConfirm();
   const [requesting, setRequesting] = useState<{
     _id: Id<"tools">;
     name: string;
@@ -41,7 +40,6 @@ export function ToolsBoard() {
   return (
     <>
       <CategoryFilter selected={category} />
-      <FormError message={removal.error} />
 
       {sentFor && (
         <div
@@ -83,7 +81,6 @@ export function ToolsBoard() {
               key={tool._id}
               tool={tool}
               canRemove={me?.role === "admin" && !tool.isMine}
-              removing={removal.pending}
               onRequest={() =>
                 setRequesting({
                   _id: tool._id,
@@ -91,11 +88,16 @@ export function ToolsBoard() {
                   ownerName: tool.owner.firstName,
                 })
               }
-              onRemove={() => {
-                if (window.confirm(`Remove the ${tool.name} listing?`)) {
-                  removal.run(() => removeTool({ toolId: tool._id }));
-                }
-              }}
+              onRemove={() =>
+                confirm({
+                  title: `Remove ${tool.owner.firstName}'s ${tool.name}?`,
+                  description:
+                    "As an admin you can take down any listing. Open requests for it are cancelled and the borrowers told.",
+                  confirmLabel: "Remove listing",
+                  destructive: true,
+                  action: () => removeTool({ toolId: tool._id }),
+                })
+              }
             />
           ))}
         </ul>
@@ -106,6 +108,7 @@ export function ToolsBoard() {
         onClose={() => setRequesting(null)}
         onSent={(name) => setSentFor(name)}
       />
+      {confirmDialog}
     </>
   );
 }

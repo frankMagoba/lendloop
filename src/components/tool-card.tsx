@@ -14,13 +14,11 @@ export type BoardTool = FunctionReturnType<typeof api.tools.list>[number];
 export function ToolCard({
   tool,
   canRemove,
-  removing,
   onRequest,
   onRemove,
 }: {
   tool: BoardTool;
   canRemove: boolean;
-  removing: boolean;
   onRequest: () => void;
   onRemove: () => void;
 }) {
@@ -65,7 +63,6 @@ export function ToolCard({
               size="icon"
               aria-label={`Remove the ${tool.name} listing`}
               title="Remove listing"
-              disabled={removing}
               onClick={onRemove}
             >
               <Trash2 />

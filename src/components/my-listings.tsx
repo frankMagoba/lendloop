@@ -7,7 +7,6 @@ import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CATEGORIES, CONDITIONS } from "@/convex/lib/validators";
-import { usePendingAction } from "@/lib/use-pending-action";
 import { useAccountReady } from "@/components/account";
 import { AvailabilityBadge } from "@/components/availability-badge";
 import { CategoryTile } from "@/components/category-icon";
@@ -18,23 +17,25 @@ import {
 } from "@/components/tool-form-dialog";
 import { Button } from "@/components/ui/button";
 import { cardClass } from "@/components/ui/card";
-import { FormError } from "@/components/ui/field";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState, LoadingCards, PageHeader } from "@/components/ui/states";
 
 export function MyListings() {
   const ready = useAccountReady();
   const tools = useQuery(api.tools.mine, ready ? {} : "skip");
   const removeTool = useMutation(api.tools.remove);
-  const { pending, error, run } = usePendingAction();
   const [draft, setDraft] = useState<ToolDraft | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
 
-  async function remove(toolId: Id<"tools">, name: string) {
-    if (
-      !window.confirm(`Remove the ${name}? Open requests will be cancelled.`)
-    ) {
-      return;
-    }
-    await run(() => removeTool({ toolId }));
+  function remove(toolId: Id<"tools">, name: string) {
+    confirm({
+      title: `Remove the ${name}?`,
+      description:
+        "It disappears from the board. Anyone with a pending or upcoming request is told it was cancelled.",
+      confirmLabel: "Remove listing",
+      destructive: true,
+      action: () => removeTool({ toolId }),
+    });
   }
 
   return (
@@ -49,8 +50,6 @@ export function MyListings() {
           </Button>
         }
       />
-      <FormError message={error} />
-
       {tools === undefined ? (
         <LoadingCards count={2} columns={1} />
       ) : tools.length === 0 ? (
@@ -107,7 +106,6 @@ export function MyListings() {
                   variant="danger"
                   aria-label={`Remove the ${tool.name}`}
                   title="Remove listing"
-                  disabled={pending}
                   onClick={() => remove(tool._id, tool.name)}
                 >
                   <Trash2 />
@@ -119,6 +117,7 @@ export function MyListings() {
       )}
 
       <ToolFormDialog draft={draft} onClose={() => setDraft(null)} />
+      {confirmDialog}
     </>
   );
 }

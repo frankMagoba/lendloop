@@ -4,19 +4,18 @@ import { useMutation, useQuery } from "convex/react";
 import { HandHelping } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
-import { usePendingAction } from "@/lib/use-pending-action";
 import { useAccountReady } from "@/components/account";
 import { LoanCard, LoanSection } from "@/components/loan-card";
 import { Person } from "@/components/person";
 import { Button } from "@/components/ui/button";
-import { FormError } from "@/components/ui/field";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState, LoadingCards, PageHeader } from "@/components/ui/states";
 
 export function MyRequests() {
   const ready = useAccountReady();
   const loans = useQuery(api.loans.myRequests, ready ? {} : "skip");
   const cancel = useMutation(api.loans.cancel);
-  const { pending, error, run } = usePendingAction();
+  const [confirm, confirmDialog] = useConfirm();
 
   const open =
     loans?.filter(
@@ -30,7 +29,6 @@ export function MyRequests() {
         title="My requests"
         description="Things you've asked to borrow."
       />
-      <FormError message={error} />
 
       {loans === undefined ? (
         <LoadingCards count={2} columns={1} />
@@ -62,8 +60,15 @@ export function MyRequests() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled={pending}
-                      onClick={() => run(() => cancel({ loanId: loan._id }))}
+                      onClick={() =>
+                        confirm({
+                          title: `Cancel your request for the ${loan.tool.name}?`,
+                          description: `${loan.owner.firstName} gets an email saying you withdrew it.`,
+                          confirmLabel: "Cancel request",
+                          destructive: true,
+                          action: () => cancel({ loanId: loan._id }),
+                        })
+                      }
                     >
                       Cancel request
                     </Button>
@@ -87,6 +92,7 @@ export function MyRequests() {
           />
         </div>
       )}
+      {confirmDialog}
     </>
   );
 }

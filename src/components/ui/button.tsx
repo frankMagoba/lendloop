@@ -8,6 +8,7 @@ const variants = {
     "border border-line bg-surface text-ink shadow-card hover:border-ink/20 hover:bg-sand/50",
   ghost: "text-ink/65 hover:bg-sand hover:text-ink",
   danger: "text-rust hover:bg-rust-soft",
+  destructive: "bg-rust text-white shadow-card hover:bg-rust/90",
 } as const;
 
 const sizes = {
