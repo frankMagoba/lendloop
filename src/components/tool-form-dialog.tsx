@@ -13,8 +13,13 @@ import {
 } from "@/convex/lib/validators";
 import { usePendingAction } from "@/lib/use-pending-action";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Field, FormError, inputClass } from "@/components/ui/field";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
+import {
+  Field,
+  FormError,
+  inputClass,
+  textareaClass,
+} from "@/components/ui/field";
 
 export type ToolDraft = {
   _id?: Id<"tools">;
@@ -43,6 +48,7 @@ export function ToolFormDialog({
       open={draft !== null}
       onClose={onClose}
       title={draft?._id ? "Edit listing" : "List a tool"}
+      description="Neighbours see the name, category, condition and description."
     >
       {draft && <ToolForm initial={draft} onDone={onClose} />}
     </Dialog>
@@ -128,18 +134,18 @@ function ToolForm({
           value={draft.description}
           onChange={(event) => set("description", event.target.value)}
           placeholder="18V, two batteries, comes with a case of bits"
-          className={inputClass}
+          className={textareaClass}
         />
       </Field>
       <FormError message={error} />
-      <div className="flex justify-end gap-2">
+      <DialogActions>
         <Button variant="ghost" onClick={onDone}>
           Cancel
         </Button>
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : draft._id ? "Save changes" : "List tool"}
         </Button>
-      </div>
+      </DialogActions>
     </form>
   );
 }

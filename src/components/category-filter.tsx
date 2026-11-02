@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CATEGORIES, type Category } from "@/convex/lib/validators";
 import { cn } from "@/lib/cn";
+import { CategoryIcon } from "@/components/category-icon";
 
 const options: [Category | null, string][] = [
   [null, "All"],
@@ -11,19 +12,23 @@ const options: [Category | null, string][] = [
 
 export function CategoryFilter({ selected }: { selected: Category | null }) {
   return (
-    <div className="mb-6 flex flex-wrap gap-2" aria-label="Filter by category">
+    <div
+      aria-label="Filter by category"
+      className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+    >
       {options.map(([value, label]) => (
         <Link
           key={label}
           href={value ? `/tools?category=${value}` : "/tools"}
           aria-current={selected === value ? "true" : undefined}
           className={cn(
-            "rounded-full border px-3 py-1 text-sm transition-colors",
+            "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-moss/40 focus-visible:outline-none",
             selected === value
-              ? "border-ink bg-ink text-paper"
-              : "border-line text-ink/70 hover:border-ink/40",
+              ? "border-ink bg-ink text-white"
+              : "border-line bg-surface text-ink/70 hover:border-ink/25 hover:text-ink",
           )}
         >
+          {value && <CategoryIcon category={value} className="size-3.5" />}
           {label}
         </Link>
       ))}

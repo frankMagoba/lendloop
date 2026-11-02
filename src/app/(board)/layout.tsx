@@ -1,11 +1,11 @@
-import { AccountGate } from "@/components/account-gate";
+import { AccountProvider } from "@/components/account";
 import { BoardNav } from "@/components/board-nav";
 
 export default function BoardLayout({ children }: LayoutProps<"/">) {
   return (
-    <>
+    <AccountProvider>
       <BoardNav />
-      <AccountGate>{children}</AccountGate>
-    </>
+      {children}
+    </AccountProvider>
   );
 }

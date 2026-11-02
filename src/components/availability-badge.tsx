@@ -9,15 +9,17 @@ export function AvailabilityBadge({
 }) {
   if (availability.status === "on_loan") {
     return availability.overdue ? (
-      <Badge tone="red">Overdue since {formatDay(availability.dueBack)}</Badge>
+      <Badge tone="red" dot>
+        Overdue since {formatDay(availability.dueBack)}
+      </Badge>
     ) : (
-      <Badge tone="amber">
+      <Badge tone="amber" dot>
         On loan until {formatDay(availability.dueBack)}
       </Badge>
     );
   }
   return (
-    <Badge tone="green">
+    <Badge tone="green" dot>
       {availability.nextBookingFrom
         ? `Free until ${formatDay(availability.nextBookingFrom)}`
         : "Available"}

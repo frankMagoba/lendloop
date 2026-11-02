@@ -1,24 +1,29 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { ArrowRight, PackageOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CATEGORIES, CONDITIONS } from "@/convex/lib/validators";
 import { usePendingAction } from "@/lib/use-pending-action";
+import { useAccountReady } from "@/components/account";
 import { AvailabilityBadge } from "@/components/availability-badge";
+import { CategoryTile } from "@/components/category-icon";
 import {
   ToolFormDialog,
   emptyDraft,
   type ToolDraft,
 } from "@/components/tool-form-dialog";
 import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
 import { FormError } from "@/components/ui/field";
-import { EmptyState, LoadingRows, PageHeader } from "@/components/ui/states";
+import { EmptyState, LoadingCards, PageHeader } from "@/components/ui/states";
 
 export function MyListings() {
-  const tools = useQuery(api.tools.mine);
+  const ready = useAccountReady();
+  const tools = useQuery(api.tools.mine, ready ? {} : "skip");
   const removeTool = useMutation(api.tools.remove);
   const { pending, error, run } = usePendingAction();
   const [draft, setDraft] = useState<ToolDraft | null>(null);
@@ -38,15 +43,18 @@ export function MyListings() {
         title="My listings"
         description="Tools you're happy to lend."
         action={
-          <Button onClick={() => setDraft(emptyDraft)}>List a tool</Button>
+          <Button onClick={() => setDraft(emptyDraft)}>
+            <Plus aria-hidden />
+            List a tool
+          </Button>
         }
       />
       <FormError message={error} />
 
       {tools === undefined ? (
-        <LoadingRows />
+        <LoadingCards count={2} columns={1} />
       ) : tools.length === 0 ? (
-        <EmptyState title="You haven't listed anything yet">
+        <EmptyState icon={PackageOpen} title="You haven't listed anything yet">
           Lending one thing you rarely use is a good start.
         </EmptyState>
       ) : (
@@ -54,27 +62,30 @@ export function MyListings() {
           {tools.map((tool) => (
             <li
               key={tool._id}
-              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line p-5"
+              className={cardClass("flex flex-wrap items-center gap-4 p-5")}
             >
-              <div className="min-w-0">
+              <CategoryTile category={tool.category} />
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="font-semibold">{tool.name}</h2>
                   <AvailabilityBadge availability={tool.availability} />
                 </div>
-                <p className="mt-0.5 text-sm text-ink/60">
+                <p className="mt-0.5 truncate text-[13px] text-ink/55">
                   {CATEGORIES[tool.category]} · {CONDITIONS[tool.condition]}
+                  {tool.description && ` · ${tool.description}`}
                 </p>
                 {tool.pendingRequests > 0 && (
                   <Link
                     href="/incoming"
-                    className="mt-2 inline-block text-sm font-medium text-moss underline"
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-moss hover:underline"
                   >
                     {tool.pendingRequests} request
                     {tool.pendingRequests === 1 ? "" : "s"} waiting
+                    <ArrowRight aria-hidden className="size-3.5" />
                   </Link>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <Button
                   size="sm"
                   variant="secondary"
@@ -88,15 +99,18 @@ export function MyListings() {
                     })
                   }
                 >
+                  <Pencil aria-hidden />
                   Edit
                 </Button>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="danger"
+                  aria-label={`Remove the ${tool.name}`}
+                  title="Remove listing"
                   disabled={pending}
                   onClick={() => remove(tool._id, tool.name)}
                 >
-                  Remove
+                  <Trash2 />
                 </Button>
               </div>
             </li>

@@ -2,26 +2,28 @@
 
 import { SignInButton } from "@clerk/nextjs";
 import { AuthLoading, Authenticated, Unauthenticated } from "convex/react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 
 export function HomeCallToAction() {
   return (
     <>
       <AuthLoading>
-        <div className="h-10 w-48 animate-pulse rounded-lg bg-sand" />
+        <div className="h-11 w-56 animate-pulse rounded-xl bg-sand" />
       </AuthLoading>
       <Unauthenticated>
         <SignInButton mode="modal" forceRedirectUrl="/tools">
-          <Button>Sign in to lend or borrow</Button>
+          <Button size="lg">
+            Sign in to lend or borrow
+            <ArrowRight aria-hidden />
+          </Button>
         </SignInButton>
       </Unauthenticated>
       <Authenticated>
-        <Link
-          href="/tools"
-          className="inline-flex h-10 items-center rounded-lg bg-ink px-4 text-sm font-medium text-paper hover:bg-ink/85"
-        >
+        <Link href="/tools" className={buttonClass({ size: "lg" })}>
           Go to the board
+          <ArrowRight aria-hidden />
         </Link>
       </Authenticated>
     </>
@@ -36,7 +38,7 @@ export function AvailableNowHint() {
       </Unauthenticated>
       <Authenticated>
         Open{" "}
-        <Link href="/tools" className="underline">
+        <Link href="/tools" className="font-medium text-moss underline">
           the board
         </Link>{" "}
         to see who&apos;s lending and to ask for dates.

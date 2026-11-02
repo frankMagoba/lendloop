@@ -1,7 +1,10 @@
+import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 
 export const inputClass =
-  "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:border-ink/40 focus:outline-none focus:ring-2 focus:ring-moss/20";
+  "h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink shadow-card transition-[border-color,box-shadow] placeholder:text-ink/35 focus:border-moss/50 focus:ring-4 focus:ring-moss/10 focus:outline-none";
+
+export const textareaClass = `${inputClass} h-auto resize-none py-2.5`;
 
 export function Field({
   label,
@@ -14,9 +17,13 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm font-medium">{label}</span>
+      <span className="flex items-baseline justify-between text-sm font-medium">
+        {label}
+        {hint && (
+          <span className="text-xs font-normal text-ink/45">{hint}</span>
+        )}
+      </span>
       {children}
-      {hint && <span className="block text-xs text-ink/50">{hint}</span>}
     </label>
   );
 }
@@ -24,7 +31,11 @@ export function Field({
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="text-sm text-rust">
+    <p
+      role="alert"
+      className="mb-4 flex items-start gap-2 rounded-xl bg-rust-soft px-3.5 py-2.5 text-sm text-rust"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" />
       {message}
     </p>
   );

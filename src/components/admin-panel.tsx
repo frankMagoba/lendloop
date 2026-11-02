@@ -1,21 +1,35 @@
 "use client";
 
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import {
+  ArrowRight,
+  Lock,
+  ShieldCheck,
+  ShieldOff,
+  TriangleAlert,
+} from "lucide-react";
+import type { ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import { timeAgo } from "@/lib/format";
 import { usePendingAction } from "@/lib/use-pending-action";
+import { useAccountReady } from "@/components/account";
 import { LoanCard } from "@/components/loan-card";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardClass } from "@/components/ui/card";
 import { FormError } from "@/components/ui/field";
-import { EmptyState, LoadingRows, PageHeader } from "@/components/ui/states";
+import { EmptyState, LoadingCards, PageHeader } from "@/components/ui/states";
 
 export function AdminPanel() {
+  const ready = useAccountReady();
   const me = useQuery(api.users.me);
-  if (me === undefined) return <LoadingRows />;
+  if (!ready || me === undefined) return <LoadingCards columns={1} />;
   if (me?.role !== "admin") {
     return (
-      <EmptyState title="Admins only">This page is for admins.</EmptyState>
+      <EmptyState icon={Lock} title="Admins only">
+        This page is for admins.
+      </EmptyState>
     );
   }
   return (
@@ -25,11 +39,20 @@ export function AdminPanel() {
         description="Neighbours, every loan, and automation failures."
       />
       <div className="space-y-10">
-        <Neighbours />
         <FailedDeliveries />
+        <Neighbours />
         <AllLoans />
       </div>
     </>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-3 font-semibold">{title}</h2>
+      {children}
+    </section>
   );
 }
 
@@ -39,31 +62,34 @@ function Neighbours() {
   const { pending, error, run } = usePendingAction();
 
   return (
-    <section>
-      <h2 className="mb-3 font-semibold">Neighbours</h2>
+    <Section title="Neighbours">
       <FormError message={error} />
       {users === undefined ? (
-        <LoadingRows count={2} />
+        <LoadingCards count={1} columns={1} />
       ) : (
-        <ul className="divide-y divide-line rounded-2xl border border-line">
+        <ul className={cardClass("divide-y divide-line/70")}>
           {users.map((user) => (
             <li
               key={user._id}
-              className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Avatar name={user.firstName} />
                 <span className="font-medium">{user.firstName}</span>
                 {user.role === "admin" && <Badge>Admin</Badge>}
                 {user.trustedLender && (
-                  <Badge tone="blue">Trusted Lender</Badge>
+                  <Badge tone="blue">
+                    <ShieldCheck aria-hidden />
+                    Trusted lender
+                  </Badge>
                 )}
-                <span className="text-sm text-ink/50">
+                <span className="text-sm text-ink/45">
                   {user.listings} listing{user.listings === 1 ? "" : "s"}
                 </span>
               </div>
               <Button
                 size="sm"
-                variant="secondary"
+                variant={user.trustedLender ? "ghost" : "secondary"}
                 disabled={pending}
                 onClick={() =>
                   run(() =>
@@ -74,13 +100,23 @@ function Neighbours() {
                   )
                 }
               >
-                {user.trustedLender ? "Remove trusted" : "Mark trusted"}
+                {user.trustedLender ? (
+                  <>
+                    <ShieldOff aria-hidden />
+                    Remove trusted
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck aria-hidden />
+                    Mark trusted
+                  </>
+                )}
               </Button>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </Section>
   );
 }
 
@@ -89,24 +125,29 @@ function FailedDeliveries() {
   if (!failures || failures.length === 0) return null;
 
   return (
-    <section>
-      <h2 className="mb-3 font-semibold">Notifications that failed</h2>
-      <ul className="space-y-2 text-sm">
+    <Section title="Notifications that failed">
+      <ul className="space-y-2">
         {failures.map((failure) => (
           <li
             key={failure._id}
-            className="rounded-xl border border-rust/30 bg-rust/5 px-4 py-3"
+            className="flex items-start gap-3 rounded-2xl border border-rust/20 bg-rust-soft px-4 py-3 text-sm"
           >
-            <span className="font-medium">{failure.type}</span> after{" "}
-            {failure.attempts} attempt{failure.attempts === 1 ? "" : "s"},{" "}
-            {timeAgo(failure._creationTime)}
-            {failure.lastError && (
-              <span className="block text-ink/60">{failure.lastError}</span>
-            )}
+            <TriangleAlert
+              aria-hidden
+              className="mt-0.5 size-4 shrink-0 text-rust"
+            />
+            <div>
+              <span className="font-medium">{failure.type}</span> after{" "}
+              {failure.attempts} attempt{failure.attempts === 1 ? "" : "s"},{" "}
+              {timeAgo(failure._creationTime)}
+              {failure.lastError && (
+                <span className="block text-ink/60">{failure.lastError}</span>
+              )}
+            </div>
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
@@ -118,19 +159,26 @@ function AllLoans() {
   );
 
   return (
-    <section>
-      <h2 className="mb-3 font-semibold">All loans</h2>
+    <Section title="All loans">
       {status === "LoadingFirstPage" ? (
-        <LoadingRows count={2} />
+        <LoadingCards count={2} columns={1} />
       ) : results.length === 0 ? (
-        <EmptyState title="No loans yet" />
+        <EmptyState icon={ArrowRight} title="No loans yet" />
       ) : (
         <ul className="space-y-3">
           {results.map((loan) => (
             <LoanCard
               key={loan._id}
               loan={loan}
-              subtitle={`${loan.owner.firstName} → ${loan.borrower.firstName}`}
+              person={
+                <span className="flex items-center gap-1.5 text-sm text-ink/65">
+                  <Avatar name={loan.owner.firstName} size="sm" />
+                  {loan.owner.firstName}
+                  <ArrowRight aria-hidden className="size-3.5 text-ink/35" />
+                  <Avatar name={loan.borrower.firstName} size="sm" />
+                  {loan.borrower.firstName}
+                </span>
+              }
             />
           ))}
         </ul>
@@ -144,6 +192,6 @@ function AllLoans() {
           Load more
         </Button>
       )}
-    </section>
+    </Section>
   );
 }

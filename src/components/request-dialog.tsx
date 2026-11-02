@@ -4,10 +4,12 @@ import { useMutation } from "convex/react";
 import { useState, type FormEvent } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { daysBetween } from "@/convex/lib/dates";
+import { LIMITS } from "@/convex/lib/validators";
 import { localToday } from "@/lib/format";
 import { usePendingAction } from "@/lib/use-pending-action";
 import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { Field, FormError, inputClass } from "@/components/ui/field";
 
 type RequestedTool = { _id: Id<"tools">; name: string; ownerName: string };
@@ -26,6 +28,10 @@ export function RequestDialog({
       open={tool !== null}
       onClose={onClose}
       title={tool ? `Borrow the ${tool.name}` : ""}
+      description={
+        tool &&
+        `${tool.ownerName} gets an email and can approve or decline. Loans can last up to ${LIMITS.loanDays} days.`
+      }
     >
       {tool && (
         <RequestForm
@@ -55,6 +61,7 @@ function RequestForm({
   const today = localToday();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  const days = daysBetween(startDate, endDate) + 1;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -66,9 +73,6 @@ function RequestForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-sm text-ink/60">
-        {tool.ownerName} will be notified and can approve or decline.
-      </p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="From">
           <input
@@ -94,15 +98,20 @@ function RequestForm({
           />
         </Field>
       </div>
+      {days > 0 && (
+        <p className="text-sm text-ink/60">
+          {days === 1 ? "1 day" : `${days} days`}
+        </p>
+      )}
       <FormError message={error} />
-      <div className="flex justify-end gap-2">
+      <DialogActions>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="accent" disabled={pending}>
           {pending ? "Sending…" : "Send request"}
         </Button>
-      </div>
+      </DialogActions>
     </form>
   );
 }
