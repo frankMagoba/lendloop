@@ -1,0 +1,87 @@
+{
+  "id": "lendloopErrors01",
+  "name": "LendLoop: error alerts",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6c1e0b7a-0000-4000-8000-000000000027",
+      "name": "On workflow error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { execution, workflow } = $json;\nconst nodeName = execution.lastNodeExecuted ?? 'unknown node';\nconst message = execution.error?.message ?? 'no error message';\n\nconsole.error(`[lendloop] ${workflow.name} failed at \"${nodeName}\": ${message}`);\n\nreturn [{\n  json: {\n    to: $env.LENDLOOP_OPS_EMAIL,\n    subject: `n8n: ${workflow.name} failed`,\n    text: [\n      `Workflow: ${workflow.name}`,\n      `Node: ${nodeName}`,\n      `Error: ${message}`,\n      `Execution: ${execution.url ?? execution.id}`,\n    ].join('\\n'),\n  },\n}];"
+      },
+      "id": "6c1e0b7a-0000-4000-8000-000000000028",
+      "name": "Describe failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.LENDLOOP_FROM_EMAIL }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "6c1e0b7a-0000-4000-8000-000000000029",
+      "name": "Alert ops",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "lendloopSmtp0001",
+          "name": "LendLoop SMTP"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Describe failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe failure": {
+      "main": [
+        [
+          {
+            "node": "Alert ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
