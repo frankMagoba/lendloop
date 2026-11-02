@@ -138,6 +138,13 @@ export const approve = userMutation({
       throw new ConvexError("That tool is no longer listed.");
     }
     const approved = await getApprovedLoans(ctx, loan.toolId);
+    // An overdue loan means the tool is still with someone, whatever its
+    // end date says, so nobody else can be promised it yet.
+    if (approved.some((other) => other.endDate < todayUtc())) {
+      throw new ConvexError(
+        "The tool hasn't come back from its last loan. Mark that loan returned first.",
+      );
+    }
     if (approved.some((other) => rangesOverlap(other, loan))) {
       throw new ConvexError(
         "You've already approved another loan for those dates.",

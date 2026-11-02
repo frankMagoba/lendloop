@@ -151,6 +151,23 @@ describe("deciding on a request", () => {
     ).rejects.toThrow(/already approved/);
   });
 
+  test("cannot approve while the tool is still out on an overdue loan", async () => {
+    const t = setup();
+    const { owner, stranger, toolId, loanId } = await pendingLoan(t);
+    await createLoan(t, {
+      toolId,
+      ownerId: owner.userId,
+      borrowerId: stranger.userId,
+      startDate: "2026-06-01",
+      endDate: "2026-06-10",
+      status: "approved",
+    });
+
+    await expect(
+      owner.as.mutation(api.loans.approve, { loanId }),
+    ).rejects.toThrow(/hasn't come back/);
+  });
+
   test("a decided request cannot be decided again", async () => {
     const t = setup();
     const { owner, loanId } = await pendingLoan(t);
