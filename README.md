@@ -186,7 +186,7 @@ Each direction has its own secret, so a leak on one side doesn't let someone for
 
 **What leaves Convex.** The loan-event payload has the recipient's first name and email, the tool name, the dates and opaque ids. It never includes the other party's details, so the owner's email isn't sent when the borrower is notified, and the reverse. Message text is written in n8n and points back to the app for details. `GET /n8n/overdue-loans` returns the same kind of minimal record. The public landing page only gets tool name and category: no owner, no description, no availability dates.
 
-**What's stored.** Only a first name and email per user, both from Clerk. Clerk keeps the rest of the profile. Admin views show first names, not emails. The outbox stores ids, not payloads, so personal data isn't copied into it. n8n execution data is pruned after seven days (`EXECUTIONS_DATA_MAX_AGE=168`).
+**What's stored.** Only a first name and email per user, both from Clerk, and the email only if Clerk has verified it. Clerk keeps the rest of the profile. Admin views show first names, not emails. The outbox stores ids, not payloads, so personal data isn't copied into it. n8n execution data is pruned after seven days (`EXECUTIONS_DATA_MAX_AGE=168`).
 
 **Input handling.** Lengths and date ranges are validated in Convex. Categories and conditions are enums in the schema. The HTTP endpoints cap the body at 4 KB and check its shape with a validator before touching the database. Error messages to the client are plain `ConvexError` strings, and internal errors aren't passed through.
 
@@ -224,7 +224,7 @@ npm run lint
 
 CI runs lint, typecheck and the tests on every push and pull request (`.github/workflows/ci.yml`).
 
-The 51 tests cover access rules for every role, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
+The 54 tests cover access rules for every role, how users are stored, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
 
 ## What I'd change for production
 

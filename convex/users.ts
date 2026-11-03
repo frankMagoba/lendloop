@@ -11,7 +11,8 @@ export const store = mutation({
 
     const firstName =
       identity.givenName ?? identity.name?.split(" ")[0] ?? "Neighbour";
-    const email = identity.email;
+    // Notifications go to this address, so only keep one Clerk has verified.
+    const email = identity.emailVerified === false ? undefined : identity.email;
 
     const existing = await ctx.db
       .query("users")
