@@ -13,6 +13,7 @@ import type * as automation from "../automation.js";
 import type * as http from "../http.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_functions from "../lib/functions.js";
+import type * as lib_log from "../lib/log.js";
 import type * as lib_signature from "../lib/signature.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as loans from "../loans.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/dates": typeof lib_dates;
   "lib/functions": typeof lib_functions;
+  "lib/log": typeof lib_log;
   "lib/signature": typeof lib_signature;
   "lib/validators": typeof lib_validators;
   loans: typeof loans;

@@ -5,6 +5,7 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import { logEvent } from "./lib/log";
 import { signedHeaders } from "./lib/signature";
 
 export const MAX_ATTEMPTS = 5;
@@ -118,7 +119,7 @@ export const markDelivered = internalMutation({
 export const markSkipped = internalMutation({
   args: { deliveryId: v.id("webhookDeliveries"), reason: v.string() },
   handler: async (ctx, { deliveryId, reason }) => {
-    console.warn(`Webhook ${deliveryId} skipped: ${reason}`);
+    logEvent("warn", "webhook.skipped", { deliveryId, reason });
     await ctx.db.patch(deliveryId, { status: "skipped", lastError: reason });
   },
 });
@@ -136,6 +137,7 @@ export const recordFailure = internalMutation({
     const attempts = delivery.attempts + 1;
     if (retryable && attempts < MAX_ATTEMPTS) {
       await ctx.db.patch(deliveryId, { attempts, lastError: error });
+      logEvent("info", "webhook.retry_scheduled", { deliveryId, attempts });
       await ctx.scheduler.runAfter(
         RETRY_DELAYS_MS[attempts - 1],
         internal.notifications.deliver,
@@ -144,9 +146,7 @@ export const recordFailure = internalMutation({
       return;
     }
 
-    console.error(
-      `Webhook ${deliveryId} failed after ${attempts} attempt(s): ${error}`,
-    );
+    logEvent("error", "webhook.failed", { deliveryId, attempts, error });
     await ctx.db.patch(deliveryId, {
       status: "failed",
       attempts,

@@ -4,11 +4,12 @@ import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { automationEventValidator } from "./automation";
 import { todayUtc } from "./lib/dates";
+import { logEvent } from "./lib/log";
 import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from "./lib/signature";
 
 const MAX_BODY_BYTES = 4096;
 
-function json(body: unknown, status = 200) {
+function respondJson(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json" },
@@ -18,8 +19,8 @@ function json(body: unknown, status = 200) {
 async function rejectUnsigned(request: Request, body: string) {
   const secret = process.env.CONVEX_WEBHOOK_SECRET;
   if (!secret) {
-    console.error("CONVEX_WEBHOOK_SECRET is not set");
-    return json({ error: "not configured" }, 503);
+    logEvent("error", "config.missing", { name: "CONVEX_WEBHOOK_SECRET" });
+    return respondJson({ error: "not configured" }, 503);
   }
   const result = await verify({
     secret,
@@ -28,10 +29,11 @@ async function rejectUnsigned(request: Request, body: string) {
     body,
   });
   if (!result.ok) {
-    console.warn(
-      `Rejected n8n request to ${new URL(request.url).pathname}: ${result.reason}`,
-    );
-    return json({ error: "invalid signature" }, 401);
+    logEvent("warn", "n8n_request.rejected", {
+      path: new URL(request.url).pathname,
+      reason: result.reason,
+    });
+    return respondJson({ error: "invalid signature" }, 401);
   }
   return null;
 }
@@ -48,7 +50,7 @@ http.route({
     const loans = await ctx.runQuery(internal.automation.overdueLoans, {
       today: todayUtc(),
     });
-    return json({ loans });
+    return respondJson({ loans });
   }),
 });
 
@@ -58,7 +60,7 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     const body = await request.text();
     if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
-      return json({ error: "payload too large" }, 413);
+      return respondJson({ error: "payload too large" }, 413);
     }
     const rejection = await rejectUnsigned(request, body);
     if (rejection) return rejection;
@@ -67,19 +69,19 @@ http.route({
     try {
       event = JSON.parse(body);
     } catch {
-      return json({ error: "body must be JSON" }, 400);
+      return respondJson({ error: "body must be JSON" }, 400);
     }
     if (!validate(automationEventValidator, event)) {
-      return json({ error: "unexpected payload shape" }, 400);
+      return respondJson({ error: "unexpected payload shape" }, 400);
     }
 
     const result = await ctx.runMutation(
       internal.automation.recordEvent,
       event,
     );
-    if (result === "unknown_loan") return json({ error: result }, 404);
-    if (result === "invalid_key") return json({ error: result }, 400);
-    return json({ result }, result === "created" ? 201 : 200);
+    if (result === "unknown_loan") return respondJson({ error: result }, 404);
+    if (result === "invalid_key") return respondJson({ error: result }, 400);
+    return respondJson({ result }, result === "created" ? 201 : 200);
   }),
 });
 
