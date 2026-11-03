@@ -79,13 +79,29 @@ npm run dev                       # http://localhost:3000
 npx convex run seed:demo          # optional: demo neighbours, tools and an overdue loan
 ```
 
-Sign in once, then make yourself an admin from the CLI:
+**5. Test accounts**
+
+With `npx convex dev` still running, one command creates three accounts you can sign in with straight away:
+
+```bash
+npm run seed:users
+```
+
+| Email                             | Name  | Role  |
+| --------------------------------- | ----- | ----- |
+| `owner+clerk_test@example.com`    | Oscar | user  |
+| `borrower+clerk_test@example.com` | Bea   | user  |
+| `admin+clerk_test@example.com`    | Ada   | admin |
+
+The script prints one generated password for all three. Set `SEED_PASSWORD` to choose it yourself. It creates the users in Clerk through the Backend API and writes their Convex records with the role already set, so the admin needs no extra step. Running it again resets the password and changes nothing else.
+
+It only runs against a Clerk development instance and exits if the keys don't start with `sk_test_` and `pk_test_`. Clerk sends no real email to `+clerk_test` addresses, so when it asks for a verification code on a new browser, enter `424242`. Use a private window or a second browser profile to be the owner and the borrower at once.
+
+To make your own account an admin instead:
 
 ```bash
 npx convex run users:setRole '{"email": "you@example.com", "role": "admin"}'
 ```
-
-To try both sides of a loan, use a second browser profile or a private window. Clerk development instances accept test addresses like `owner+clerk_test@example.com`, and when Clerk asks for an email code on those addresses, `424242` works without a real inbox.
 
 To fire the overdue reminder without waiting for 09:00, open the "LendLoop: daily overdue reminders" workflow in n8n and run it manually. The seeded tent loan is two days overdue, so Priya gets an email.
 
@@ -224,7 +240,7 @@ npm run lint
 
 CI runs lint, typecheck and the tests on every push and pull request (`.github/workflows/ci.yml`).
 
-The 54 tests cover access rules for every role, how users are stored, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
+The 57 tests cover access rules for every role, how users are stored and seeded, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
 
 ## What I'd change for production
 
