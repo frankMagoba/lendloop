@@ -3,11 +3,13 @@
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import {
   ArrowRight,
+  History,
   Lock,
   ShieldCheck,
   ShieldOff,
   TriangleAlert,
 } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
 import type { ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import { formatTimeAgo } from "@/lib/format";
@@ -41,6 +43,7 @@ export function AdminPanel() {
       <div className="space-y-10">
         <FailedDeliveries />
         <Neighbours />
+        <RecentActivity />
         <AllLoans />
       </div>
     </>
@@ -114,6 +117,59 @@ function Neighbours() {
                   </>
                 )}
               </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+type AuditEntry = FunctionReturnType<typeof api.admin.auditLog>[number];
+
+function describeAuditEntry({ action, actor, target, detail }: AuditEntry) {
+  switch (action) {
+    case "loan.requested":
+      return `${actor} asked to borrow the ${target}`;
+    case "loan.approved":
+      return `${actor} approved a loan of the ${target}`;
+    case "loan.declined":
+      return `${actor} declined a request for the ${target}`;
+    case "loan.cancelled":
+      return `${actor} cancelled a request for the ${target}`;
+    case "loan.returned":
+      return `${actor} marked the ${target} returned`;
+    case "tool.removed":
+      return `${actor} removed the ${target} listing`;
+    case "user.trusted_lender_changed":
+      return detail === "trusted"
+        ? `${actor} marked ${target} as a trusted lender`
+        : `${actor} removed ${target}'s trusted lender badge`;
+    case "user.role_changed":
+      return `${actor} set ${target}'s role to ${detail}`;
+  }
+}
+
+function RecentActivity() {
+  const entries = useQuery(api.admin.auditLog);
+
+  return (
+    <Section title="Recent activity">
+      {entries === undefined ? (
+        <LoadingCards count={1} columns={1} />
+      ) : entries.length === 0 ? (
+        <EmptyState icon={History} title="Nothing recorded yet" />
+      ) : (
+        <ul className={cardClass("divide-y divide-line/70 text-sm")}>
+          {entries.map((entry) => (
+            <li
+              key={entry._id}
+              className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-5 py-3"
+            >
+              <span>{describeAuditEntry(entry)}</span>
+              <span className="text-xs text-ink/45">
+                {formatTimeAgo(entry._creationTime)}
+              </span>
             </li>
           ))}
         </ul>
