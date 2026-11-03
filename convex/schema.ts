@@ -1,6 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+  auditActionValidator,
+  auditTargetValidator,
   automationKindValidator,
   automationStatusValidator,
   categoryValidator,
@@ -61,6 +63,16 @@ export default defineSchema({
     attempts: v.number(),
     lastError: v.optional(v.string()),
   }).index("by_status", ["status"]),
+
+  // Append-only record of who changed what. Ids only, so nothing personal
+  // is copied; names are looked up when an admin reads it.
+  auditLog: defineTable({
+    actorId: v.optional(v.id("users")),
+    action: auditActionValidator,
+    target: auditTargetValidator,
+    targetId: v.string(),
+    detail: v.optional(v.string()),
+  }),
 
   automationEvents: defineTable({
     loanId: v.id("loans"),

@@ -70,6 +70,20 @@ export const deliveryStatusValidator = v.union(
   v.literal("skipped"),
 );
 
+export const auditActionValidator = v.union(
+  loanEventTypeValidator,
+  v.literal("tool.removed"),
+  v.literal("user.trusted_lender_changed"),
+  v.literal("user.role_changed"),
+);
+export type AuditAction = Infer<typeof auditActionValidator>;
+
+export const auditTargetValidator = v.union(
+  v.literal("loan"),
+  v.literal("tool"),
+  v.literal("user"),
+);
+
 export const LIMITS = {
   toolName: 60,
   description: 280,

@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
-import { query, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { query } from "./_generated/server";
 import { todayUtc } from "./lib/dates";
 import { userMutation, userQuery } from "./lib/functions";
 import {
@@ -8,11 +8,13 @@ import {
   conditionValidator,
   LIMITS,
 } from "./lib/validators";
+import { recordAudit } from "./model/audit";
 import {
   cancelOutstandingLoans,
   describeAvailability,
   getApprovedLoans,
 } from "./model/loans";
+import { getListedTool, isListed } from "./model/tools";
 
 const PAGE_SIZE = 200;
 
@@ -38,18 +40,6 @@ function cleanToolInput<T extends { name: string; description: string }>(
     );
   }
   return { ...input, name, description };
-}
-
-async function getListedTool(ctx: QueryCtx, toolId: Id<"tools">) {
-  const tool = await ctx.db.get(toolId);
-  if (!tool || tool.removedAt) {
-    throw new ConvexError("That tool is no longer listed.");
-  }
-  return tool;
-}
-
-function isListed(tool: Doc<"tools">) {
-  return tool.removedAt === undefined;
 }
 
 // Signed-out visitors only get name and category, so nothing here can be
@@ -195,6 +185,17 @@ export const remove = userMutation({
     }
 
     await ctx.db.patch(toolId, { removedAt: Date.now() });
-    await cancelOutstandingLoans(ctx, toolId, today);
+    await recordAudit(ctx, {
+      actorId: ctx.user._id,
+      action: "tool.removed",
+      target: "tool",
+      targetId: toolId,
+      detail: isOwner ? undefined : "removed by an admin",
+    });
+    await cancelOutstandingLoans(ctx, {
+      toolId,
+      actorId: ctx.user._id,
+      today,
+    });
   },
 });

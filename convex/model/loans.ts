@@ -2,6 +2,7 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { LoanEventType } from "../lib/validators";
+import { recordAudit } from "./audit";
 
 export type Availability =
   | { status: "available"; nextBookingFrom: string | null }
@@ -63,17 +64,35 @@ export async function getRecentActivity(ctx: QueryCtx, loanId: Id<"loans">) {
   );
 }
 
-export async function enqueueLoanEvent(
+// Every loan change goes through here, so the notification and the audit
+// entry are written in the same transaction as the change itself.
+export async function recordLoanEvent(
   ctx: MutationCtx,
-  event: { loanId: Id<"loans">; type: LoanEventType; recipientId: Id<"users"> },
+  event: {
+    loanId: Id<"loans">;
+    changes?: Partial<Doc<"loans">>;
+    type: LoanEventType;
+    recipientId: Id<"users">;
+    actorId: Id<"users">;
+  },
 ) {
+  const { loanId, changes, type, recipientId, actorId } = event;
+  if (changes) await ctx.db.patch(loanId, changes);
   const deliveryId = await ctx.db.insert("webhookDeliveries", {
-    ...event,
+    loanId,
+    type,
+    recipientId,
     status: "pending",
     attempts: 0,
   });
   await ctx.scheduler.runAfter(0, internal.notifications.deliver, {
     deliveryId,
+  });
+  await recordAudit(ctx, {
+    actorId,
+    action: type,
+    target: "loan",
+    targetId: loanId,
   });
 }
 
@@ -81,8 +100,15 @@ export async function enqueueLoanEvent(
 // alone so the owner can still mark the tool as returned.
 export async function cancelOutstandingLoans(
   ctx: MutationCtx,
-  toolId: Id<"tools">,
-  today: string,
+  {
+    toolId,
+    actorId,
+    today,
+  }: {
+    toolId: Id<"tools">;
+    actorId: Id<"users">;
+    today: string;
+  },
 ) {
   const pending = await ctx.db
     .query("loans")
@@ -94,14 +120,12 @@ export async function cancelOutstandingLoans(
     (loan) => loan.startDate > today,
   );
   for (const loan of [...pending, ...upcoming]) {
-    await ctx.db.patch(loan._id, {
-      status: "cancelled",
-      decidedAt: Date.now(),
-    });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId: loan._id,
+      changes: { status: "cancelled", decidedAt: Date.now() },
       type: "loan.cancelled",
       recipientId: loan.borrowerId,
+      actorId,
     });
   }
 }

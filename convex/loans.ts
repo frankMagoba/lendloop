@@ -12,10 +12,11 @@ import {
 import { adminQuery, userMutation, userQuery } from "./lib/functions";
 import { LIMITS } from "./lib/validators";
 import {
-  enqueueLoanEvent,
   getApprovedLoans,
   getRecentActivity,
+  recordLoanEvent,
 } from "./model/loans";
+import { getListedTool } from "./model/tools";
 
 function validateRange(startDate: string, endDate: string, today: string) {
   if (!isIsoDate(startDate) || !isIsoDate(endDate)) {
@@ -46,7 +47,13 @@ function assertStatus(loan: Doc<"loans">, expected: Doc<"loans">["status"]) {
   }
 }
 
-async function withDetails(ctx: QueryCtx, loan: Doc<"loans">) {
+function assertOwner(loan: Doc<"loans">, userId: Id<"users">, action: string) {
+  if (loan.ownerId !== userId) {
+    throw new ConvexError(`Only the tool's owner can ${action}.`);
+  }
+}
+
+async function loadLoanView(ctx: QueryCtx, loan: Doc<"loans">) {
   const [tool, owner, borrower, activity] = await Promise.all([
     ctx.db.get(loan.toolId),
     ctx.db.get(loan.ownerId),
@@ -77,10 +84,7 @@ export const request = userMutation({
     endDate: v.string(),
   },
   handler: async (ctx, { toolId, startDate, endDate }) => {
-    const tool = await ctx.db.get(toolId);
-    if (!tool || tool.removedAt) {
-      throw new ConvexError("That tool is no longer listed.");
-    }
+    const tool = await getListedTool(ctx, toolId);
     if (tool.ownerId === ctx.user._id) {
       throw new ConvexError("You can't borrow your own tool.");
     }
@@ -115,10 +119,11 @@ export const request = userMutation({
       endDate,
       status: "pending",
     });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId,
       type: "loan.requested",
       recipientId: tool.ownerId,
+      actorId: ctx.user._id,
     });
     return loanId;
   },
@@ -128,15 +133,10 @@ export const approve = userMutation({
   args: { loanId: v.id("loans") },
   handler: async (ctx, { loanId }) => {
     const loan = await getLoan(ctx, loanId);
-    if (loan.ownerId !== ctx.user._id) {
-      throw new ConvexError("Only the tool's owner can approve this.");
-    }
+    assertOwner(loan, ctx.user._id, "approve this");
     assertStatus(loan, "pending");
+    await getListedTool(ctx, loan.toolId);
 
-    const tool = await ctx.db.get(loan.toolId);
-    if (!tool || tool.removedAt) {
-      throw new ConvexError("That tool is no longer listed.");
-    }
     const approved = await getApprovedLoans(ctx, loan.toolId);
     // An overdue loan means the tool is still with someone, whatever its
     // end date says, so nobody else can be promised it yet.
@@ -151,11 +151,12 @@ export const approve = userMutation({
       );
     }
 
-    await ctx.db.patch(loanId, { status: "approved", decidedAt: Date.now() });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId,
+      changes: { status: "approved", decidedAt: Date.now() },
       type: "loan.approved",
       recipientId: loan.borrowerId,
+      actorId: ctx.user._id,
     });
   },
 });
@@ -164,16 +165,15 @@ export const decline = userMutation({
   args: { loanId: v.id("loans") },
   handler: async (ctx, { loanId }) => {
     const loan = await getLoan(ctx, loanId);
-    if (loan.ownerId !== ctx.user._id) {
-      throw new ConvexError("Only the tool's owner can decline this.");
-    }
+    assertOwner(loan, ctx.user._id, "decline this");
     assertStatus(loan, "pending");
 
-    await ctx.db.patch(loanId, { status: "declined", decidedAt: Date.now() });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId,
+      changes: { status: "declined", decidedAt: Date.now() },
       type: "loan.declined",
       recipientId: loan.borrowerId,
+      actorId: ctx.user._id,
     });
   },
 });
@@ -187,11 +187,12 @@ export const cancel = userMutation({
     }
     assertStatus(loan, "pending");
 
-    await ctx.db.patch(loanId, { status: "cancelled", decidedAt: Date.now() });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId,
+      changes: { status: "cancelled", decidedAt: Date.now() },
       type: "loan.cancelled",
       recipientId: loan.ownerId,
+      actorId: ctx.user._id,
     });
   },
 });
@@ -202,16 +203,15 @@ export const markReturned = userMutation({
   args: { loanId: v.id("loans") },
   handler: async (ctx, { loanId }) => {
     const loan = await getLoan(ctx, loanId);
-    if (loan.ownerId !== ctx.user._id) {
-      throw new ConvexError("Only the tool's owner can mark it returned.");
-    }
+    assertOwner(loan, ctx.user._id, "mark it returned");
     assertStatus(loan, "approved");
 
-    await ctx.db.patch(loanId, { status: "returned", returnedAt: Date.now() });
-    await enqueueLoanEvent(ctx, {
+    await recordLoanEvent(ctx, {
       loanId,
+      changes: { status: "returned", returnedAt: Date.now() },
       type: "loan.returned",
       recipientId: loan.borrowerId,
+      actorId: ctx.user._id,
     });
   },
 });
@@ -224,7 +224,7 @@ export const myRequests = userQuery({
       .withIndex("by_borrower", (q) => q.eq("borrowerId", ctx.user._id))
       .order("desc")
       .take(100);
-    return Promise.all(loans.map((loan) => withDetails(ctx, loan)));
+    return Promise.all(loans.map((loan) => loadLoanView(ctx, loan)));
   },
 });
 
@@ -236,7 +236,7 @@ export const incoming = userQuery({
       .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
       .order("desc")
       .take(100);
-    return Promise.all(loans.map((loan) => withDetails(ctx, loan)));
+    return Promise.all(loans.map((loan) => loadLoanView(ctx, loan)));
   },
 });
 
@@ -250,7 +250,7 @@ export const listAll = adminQuery({
     return {
       ...result,
       page: await Promise.all(
-        result.page.map((loan) => withDetails(ctx, loan)),
+        result.page.map((loan) => loadLoanView(ctx, loan)),
       ),
     };
   },

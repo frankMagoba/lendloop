@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { addDays, todayUtc } from "./lib/dates";
 import { roleValidator } from "./lib/validators";
+import { recordAudit } from "./model/audit";
 
 // Demo data for local development: `npx convex run seed:demo`.
 // The seeded neighbours have no Clerk account, so nobody can sign in as them.
@@ -97,11 +98,18 @@ export const testUsers = internalMutation({
           q.eq("tokenIdentifier", user.tokenIdentifier),
         )
         .unique();
-      if (existing) {
-        await ctx.db.patch(existing._id, user);
-      } else {
-        await ctx.db.insert("users", { ...user, trustedLender: false });
-      }
+      const userId = existing
+        ? existing._id
+        : await ctx.db.insert("users", { ...user, trustedLender: false });
+      if (existing) await ctx.db.patch(existing._id, user);
+      if (existing?.role === user.role) continue;
+
+      await recordAudit(ctx, {
+        action: "user.role_changed",
+        target: "user",
+        targetId: userId,
+        detail: user.role,
+      });
     }
     return users.length;
   },

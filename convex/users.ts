@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./lib/functions";
 import { roleValidator } from "./lib/validators";
+import { recordAudit } from "./model/audit";
 
 export const store = mutation({
   args: {},
@@ -63,6 +64,12 @@ export const setRole = internalMutation({
       .first();
     if (!user) throw new ConvexError(`No user with email ${email}`);
     await ctx.db.patch(user._id, { role });
+    await recordAudit(ctx, {
+      action: "user.role_changed",
+      target: "user",
+      targetId: user._id,
+      detail: role,
+    });
     return user._id;
   },
 });
