@@ -15,6 +15,8 @@ Built with Next.js 16 (App Router), Clerk, Convex, n8n and TypeScript.
 - [Security and data minimisation](#security-and-data-minimisation)
 - [Reliability and error handling](#reliability-and-error-handling)
 - [Tests](#tests)
+- [Decisions and trade-offs](#decisions-and-trade-offs)
+- [If this held clinical data](#if-this-held-clinical-data)
 - [What I'd change for production](#what-id-change-for-production)
 
 ## Running it locally
@@ -148,6 +150,7 @@ flowchart LR
 | `loans`             | One row per borrow request. Status goes `pending` → `approved` / `declined` / `cancelled`, then `approved` → `returned` |
 | `webhookDeliveries` | Outbox for calls to n8n: event type, loan, recipient, attempts, last error                                              |
 | `automationEvents`  | What n8n reported back, keyed by an idempotency key. Shown on each loan as "Reminder sent 2 days ago"                   |
+| `auditLog`          | Who did what, to which record, and when: loan decisions, removals, trust and role changes. Ids only                     |
 
 Availability isn't stored. It's worked out from approved loans and today's date: a tool is "on loan" once an approved loan has started, and overdue once its end date has passed. Approving a request that overlaps another approved loan is refused, and so is any approval while the tool is still out on an overdue loan, since it hasn't come back yet.
 
@@ -162,10 +165,14 @@ convex/
   schema.ts            tables and indexes
   lib/functions.ts     userQuery / userMutation / adminQuery / adminMutation
   lib/signature.ts     HMAC signing and verification
+  lib/log.ts           structured JSON log events
   tools.ts loans.ts admin.ts users.ts
   notifications.ts     outbox delivery with retries
   automation.ts http.ts  endpoints n8n calls
   model/loans.ts       shared loan rules (availability, outbox, cancellation)
+  model/audit.ts       audit log writes
+  seed.ts              demo data and test-account records
+scripts/seed-users.mjs creates Clerk test accounts (dev instances only)
 src/
   app/                 landing page and the (board) route group
   components/          UI, one file per view
@@ -208,13 +215,19 @@ Each direction has its own secret, so a leak on one side doesn't let someone for
 
 **Abuse limits.** A borrower can have at most ten pending requests and one per tool. Loans are capped at 30 days.
 
+**Audit trail.** Every loan decision, listing removal, trusted-lender change and role change writes an `auditLog` row atomically with the change itself, so the two can't drift apart. Rows hold ids, not names, and admins read them as sentences under "Recent activity". Role changes made from the CLI are recorded with no actor, which marks them as operator actions.
+
+**Logs.** Convex functions log one JSON object per event (`webhook.failed`, `n8n_request.rejected`, `config.missing` and so on) through `convex/lib/log.ts`. A log drain can index the fields, and the helper's contract is that callers pass ids and reasons, never names or emails.
+
+**Encryption.** Traffic between the browser, Convex, Clerk and n8n runs over TLS outside local development. Convex and Clerk encrypt stored data at rest, and n8n encrypts its stored credentials with `N8N_ENCRYPTION_KEY`.
+
 **Browser hardening.** Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, a strict referrer policy, a permissions policy that turns off camera, microphone and location, and HSTS. `X-Powered-By` is switched off. Actions that can't be undone (removing a listing, cancelling, declining, marking returned) go through a confirm dialog that names what happens next, such as who gets emailed.
 
 ## Reliability and error handling
 
 Convex → n8n:
 
-- The outbox row is written in the same transaction as the loan change, so an event can't be lost between the two.
+- The outbox row commits together with the loan change, so an event can't be lost between the two.
 - `deliver` retries network errors, 5xx, 408 and 429 with backoff (30 s, 2 min, 10 min, 30 min) for up to five attempts, then marks the row `failed` and logs it. Other 4xx responses, such as a bad signature, fail straight away because retrying the same bytes won't help.
 - Failed deliveries are listed on the admin page.
 - With no n8n configured, events are marked `skipped` instead of failing.
@@ -240,7 +253,27 @@ npm run lint
 
 CI runs lint, typecheck and the tests on every push and pull request (`.github/workflows/ci.yml`).
 
-The 57 tests cover access rules for every role, how users are stored and seeded, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit.
+The 61 tests cover access rules for every role, the audit trail, how users are stored and seeded, the loan lifecycle and date validation, signature verification including tampering and replay, the HTTP endpoints including idempotent write-backs, and outbox delivery including retry, give-up and skip cases. There are no automated UI tests yet. I went through the main flows by hand with two accounts: list, request, approve, return, the admin panel, and the emails in Mailpit. I also checked every page at 360px wide for overflow, and the inputs use 16px text on phones so iOS doesn't zoom in when you tap one.
+
+## Decisions and trade-offs
+
+- **Outbox instead of calling n8n from the mutation.** Mutations can't make network calls, and doing it from the client would lose events. Writing a row in the same transaction and delivering it from a scheduled action means a loan change and its notification either both happen or neither does.
+- **n8n writes the email text.** Convex sends facts (event type, tool, dates, recipient). Wording lives in the workflow, so it can change without a deploy, and nothing free-form from users goes into an email.
+- **Separate secrets per direction.** A leaked n8n secret lets someone forge events into n8n, not write records into Convex, and the reverse.
+- **Answer `202` before sending the email.** Convex only needs to know n8n accepted the event. The email result comes back through the signed write-back, which is idempotent, so a slow SMTP server can't make Convex retry and send twice.
+- **Availability is computed, not stored.** With this little data it's cheap, and there's no second copy of the truth to keep in sync. The production section says when I'd change that.
+- **Soft delete for listings.** Loans keep pointing at a real tool, so history and the audit trail still make sense after a removal.
+- **Roles only from the CLI.** No client-callable path can grant admin, which removes a whole class of privilege-escalation bugs.
+
+## If this held clinical data
+
+LendLoop holds a first name, an email and some borrowing history. Fluence's products deal with clinicians and, potentially, trial participants, so the same design would need to go further:
+
+- **Data classification first.** Decide which fields count as health or sensitive data, keep them out of notification payloads entirely, and send only a link back to the app, which is what LendLoop already does with loan details.
+- **Vendors under agreement.** Every processor that touches the data (auth, database, automation, email) needs a data processing agreement, and a BAA where HIPAA applies. Where a vendor won't sign one, self-host it. n8n already runs that way here.
+- **Audit you can't edit.** Ship the audit log to append-only storage outside the app database, such as S3 with Object Lock or CloudTrail Lake, and record reads of sensitive records as well as writes.
+- **Stronger sessions for privileged users.** Require MFA for admins and clinicians in Clerk, with short session lifetimes.
+- **Retention and erasure.** Set retention per table, and on account deletion remove or anonymise the person's rows while keeping the audit entries, which only hold ids.
 
 ## What I'd change for production
 
@@ -249,7 +282,7 @@ The 57 tests cover access rules for every role, how users are stored and seeded,
 - **Email.** Replace Mailpit with a real provider (SES, Postmark) holding its key in an n8n credential. Add unsubscribe handling and a per-user notification setting.
 - **Clerk webhooks.** Sync users and deletions through Clerk's webhook instead of on sign-in, so deleting an account removes the Convex row and cancels open requests.
 - **Scale.** Listing queries read up to 200 rows and work out availability per tool. Past a few thousand tools I'd paginate the board, store an availability field updated by the loan mutations, and paginate `/n8n/overdue-loans`.
-- **Observability.** Send Convex logs and n8n error alerts to Sentry or Datadog rather than email, and alert on the count of `failed` deliveries.
+- **Observability.** Point a Convex log drain at Datadog so the JSON events are searchable, add Sentry to the Next.js app, send n8n error alerts there instead of email, and alert on the count of `failed` deliveries.
 - **Handover.** Once a loan is approved, the two neighbours still have to arrange pickup outside the app. I'd add short per-loan messages instead of revealing email addresses to each other.
 - **Content Security Policy.** Add a nonce-based CSP. I left it out here because Clerk's scripts and the Convex websocket need allowlisting per environment, and a wrong policy breaks sign-in quietly.
 - **Abuse.** Rate-limit mutations per user (`@convex-dev/rate-limiter`) and add a way to report a listing.
