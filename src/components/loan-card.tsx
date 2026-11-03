@@ -3,7 +3,7 @@ import { BellRing, CalendarDays, Mail, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { api } from "@/convex/_generated/api";
 import type { LoanEventType } from "@/convex/lib/validators";
-import { formatRange, localToday, timeAgo } from "@/lib/format";
+import { formatRange, getLocalToday, formatTimeAgo } from "@/lib/format";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { cardClass } from "@/components/ui/card";
 
@@ -15,7 +15,7 @@ function statusBadge(loan: LoanView): [BadgeTone, string] {
       return ["amber", "Pending"];
     case "approved":
       if (loan.overdue) return ["red", "Overdue"];
-      return loan.startDate > localToday()
+      return loan.startDate > getLocalToday()
         ? ["green", "Approved"]
         : ["blue", "On loan"];
     case "declined":
@@ -27,7 +27,7 @@ function statusBadge(loan: LoanView): [BadgeTone, string] {
   }
 }
 
-const emailLabels: Record<LoanEventType, string> = {
+const EMAIL_LABELS: Record<LoanEventType, string> = {
   "loan.requested": "Request email",
   "loan.approved": "Approval email",
   "loan.declined": "Decline email",
@@ -37,7 +37,7 @@ const emailLabels: Record<LoanEventType, string> = {
 
 function activityLabel(event: LoanView["activity"][number]) {
   if (event.kind === "overdue_reminder") return "Overdue reminder";
-  return event.eventType ? emailLabels[event.eventType] : "Notification";
+  return event.eventType ? EMAIL_LABELS[event.eventType] : "Notification";
 }
 
 function ActivityIcon({ event }: { event: LoanView["activity"][number] }) {
@@ -100,7 +100,7 @@ export function LoanCard({
                 ) : (
                   <span className="text-rust">failed</span>
                 )}{" "}
-                {timeAgo(event.occurredAt)}
+                {formatTimeAgo(event.occurredAt)}
               </span>
             </li>
           ))}

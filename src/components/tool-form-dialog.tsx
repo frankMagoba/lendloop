@@ -17,8 +17,8 @@ import { Dialog, DialogActions } from "@/components/ui/dialog";
 import {
   Field,
   FormError,
-  inputClass,
-  textareaClass,
+  INPUT_CLASS,
+  TEXTAREA_CLASS,
 } from "@/components/ui/field";
 
 export type ToolDraft = {
@@ -64,7 +64,7 @@ function ToolForm({
 }) {
   const createTool = useMutation(api.tools.create);
   const updateTool = useMutation(api.tools.update);
-  const { pending, error, run } = usePendingAction();
+  const { pending, error, attempt } = usePendingAction();
   const [draft, setDraft] = useState(initial);
 
   function set<K extends keyof ToolDraft>(key: K, value: ToolDraft[K]) {
@@ -74,7 +74,7 @@ function ToolForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     const { _id, ...fields } = draft;
-    const ok = await run(() =>
+    const ok = await attempt(() =>
       _id ? updateTool({ toolId: _id, ...fields }) : createTool(fields),
     );
     if (ok) onDone();
@@ -89,7 +89,7 @@ function ToolForm({
           value={draft.name}
           onChange={(event) => set("name", event.target.value)}
           placeholder="Cordless drill"
-          className={inputClass}
+          className={INPUT_CLASS}
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -99,7 +99,7 @@ function ToolForm({
             onChange={(event) =>
               set("category", event.target.value as Category)
             }
-            className={inputClass}
+            className={INPUT_CLASS}
           >
             {Object.entries(CATEGORIES).map(([value, label]) => (
               <option key={value} value={value}>
@@ -114,7 +114,7 @@ function ToolForm({
             onChange={(event) =>
               set("condition", event.target.value as Condition)
             }
-            className={inputClass}
+            className={INPUT_CLASS}
           >
             {Object.entries(CONDITIONS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -134,7 +134,7 @@ function ToolForm({
           value={draft.description}
           onChange={(event) => set("description", event.target.value)}
           placeholder="18V, two batteries, comes with a case of bits"
-          className={textareaClass}
+          className={TEXTAREA_CLASS}
         />
       </Field>
       <FormError message={error} />

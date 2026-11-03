@@ -38,10 +38,10 @@ function ConfirmBody({
   request: ConfirmRequest;
   onDone: () => void;
 }) {
-  const { pending, error, run } = usePendingAction();
+  const { pending, error, attempt } = usePendingAction();
 
   async function confirm() {
-    if (await run(request.action)) onDone();
+    if (await attempt(request.action)) onDone();
   }
 
   return (

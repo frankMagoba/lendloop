@@ -18,7 +18,7 @@ export function IncomingRequests() {
   const approve = useMutation(api.loans.approve);
   const decline = useMutation(api.loans.decline);
   const markReturned = useMutation(api.loans.markReturned);
-  const { pending, error, run } = usePendingAction();
+  const { pending, error, attempt } = usePendingAction();
   const [confirm, confirmDialog] = useConfirm();
 
   const waiting = loans?.filter((loan) => loan.status === "pending") ?? [];
@@ -78,7 +78,9 @@ export function IncomingRequests() {
                       size="sm"
                       variant="accent"
                       disabled={pending}
-                      onClick={() => run(() => approve({ loanId: loan._id }))}
+                      onClick={() =>
+                        attempt(() => approve({ loanId: loan._id }))
+                      }
                     >
                       <Check aria-hidden />
                       Approve

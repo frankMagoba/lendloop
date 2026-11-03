@@ -3,7 +3,7 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
-import { errorMessage } from "@/lib/format";
+import { getErrorMessage } from "@/lib/format";
 import { FormError } from "@/components/ui/field";
 
 const AccountReady = createContext(false);
@@ -18,7 +18,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    storeUser().catch((err) => setError(errorMessage(err)));
+    storeUser().catch((err) => setError(getErrorMessage(err)));
   }, [isAuthenticated, storeUser]);
 
   return (

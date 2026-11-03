@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import { addDays, todayUtc } from "./lib/dates";
+import { addDays, getTodayUtc } from "./lib/dates";
 import { roleValidator } from "./lib/validators";
 import { recordAudit } from "./model/audit";
 
@@ -54,7 +54,7 @@ export const demo = internalMutation({
     await tool(tomasz, "Stand mixer", "kitchen", "Comes with a dough hook.");
     await tool(priya, "Pressure washer", "garden", "Hose is 8m long.");
 
-    const today = todayUtc();
+    const today = getTodayUtc();
     await ctx.db.insert("loans", {
       toolId: tent,
       ownerId: tomasz,

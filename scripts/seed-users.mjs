@@ -41,14 +41,14 @@ if (
 
 // The publishable key is the base64 Frontend API host followed by "$".
 // Convex identifies Clerk users as "<issuer>|<user id>".
-function issuerFrom(key) {
+function getIssuerFromKey(key) {
   const host = Buffer.from(key.split("_")[2], "base64")
     .toString("utf8")
     .replace(/\$$/, "");
   return `https://${host}`;
 }
 
-async function clerk(path, init = {}) {
+async function callClerk(path, init = {}) {
   const response = await fetch(`${CLERK_API}${path}`, {
     ...init,
     headers: {
@@ -66,16 +66,16 @@ async function clerk(path, init = {}) {
 
 async function upsertClerkUser(account, password) {
   const query = new URLSearchParams({ email_address: account.email });
-  const [existing] = await clerk(`/users?${query}`);
+  const [existing] = await callClerk(`/users?${query}`);
   const fields = { password, skip_password_checks: true };
   if (existing) {
-    await clerk(`/users/${existing.id}`, {
+    await callClerk(`/users/${existing.id}`, {
       method: "PATCH",
       body: JSON.stringify(fields),
     });
     return { id: existing.id, created: false };
   }
-  const user = await clerk("/users", {
+  const user = await callClerk("/users", {
     method: "POST",
     body: JSON.stringify({
       ...fields,
@@ -89,7 +89,7 @@ async function upsertClerkUser(account, password) {
 
 const password =
   process.env.SEED_PASSWORD ?? `ll-${randomBytes(9).toString("base64url")}`;
-const issuer = issuerFrom(publishableKey);
+const issuer = getIssuerFromKey(publishableKey);
 
 const results = [];
 for (const account of ACCOUNTS) {

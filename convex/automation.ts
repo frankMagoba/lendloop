@@ -25,8 +25,8 @@ const KEY_PREFIX: Record<AutomationKind, string> = {
 
 // One reminder per loan per day. A rerun of the daily workflow reuses the
 // same key, so it can never produce a second reminder record.
-export function overdueReminderKey(loanId: Id<"loans">, today: string) {
-  return `overdue:${loanId}:${today}`;
+export function buildOverdueReminderKey(loanId: Id<"loans">, today: string) {
+  return `${KEY_PREFIX.overdue_reminder}${loanId}:${today}`;
 }
 
 export const overdueLoans = internalQuery({
@@ -41,7 +41,7 @@ export const overdueLoans = internalQuery({
 
     const due = [];
     for (const loan of loans) {
-      const idempotencyKey = overdueReminderKey(loan._id, today);
+      const idempotencyKey = buildOverdueReminderKey(loan._id, today);
       const existing = await ctx.db
         .query("automationEvents")
         .withIndex("by_idempotency_key", (q) =>

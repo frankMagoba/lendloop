@@ -4,7 +4,7 @@ export const MAX_CLOCK_SKEW_SECONDS = 300;
 
 const encoder = new TextEncoder();
 
-async function hmacSha256Hex(secret: string, message: string) {
+async function computeHmacHex(secret: string, message: string) {
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
@@ -30,10 +30,10 @@ function timingSafeEqual(a: string, b: string) {
 // The timestamp is part of the signed string so a captured request
 // cannot be replayed once it falls outside the skew window.
 export async function sign(secret: string, timestamp: string, body: string) {
-  return `v1=${await hmacSha256Hex(secret, `${timestamp}.${body}`)}`;
+  return `v1=${await computeHmacHex(secret, `${timestamp}.${body}`)}`;
 }
 
-export async function signedHeaders(
+export async function buildSignedHeaders(
   secret: string,
   body: string,
   now: number = Date.now(),

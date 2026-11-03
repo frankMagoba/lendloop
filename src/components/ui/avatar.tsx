@@ -1,6 +1,6 @@
 import { cn } from "@/lib/cn";
 
-const palette = [
+const AVATAR_TONES = [
   "bg-moss-soft text-moss",
   "bg-sky-soft text-sky-ink",
   "bg-amber-soft text-amber-ink",
@@ -8,10 +8,10 @@ const palette = [
   "bg-sand text-ink/70",
 ];
 
-function pick(name: string) {
+function pickAvatarTone(name: string) {
   let hash = 0;
   for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return palette[hash % palette.length];
+  return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
 export function Avatar({
@@ -27,7 +27,7 @@ export function Avatar({
       className={cn(
         "inline-grid shrink-0 place-items-center rounded-full font-semibold uppercase",
         size === "sm" ? "size-5 text-[10px]" : "size-7 text-xs",
-        pick(name),
+        pickAvatarTone(name),
       )}
     >
       {name.charAt(0)}

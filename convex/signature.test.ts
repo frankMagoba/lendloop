@@ -3,7 +3,7 @@ import {
   SIGNATURE_HEADER,
   TIMESTAMP_HEADER,
   sign,
-  signedHeaders,
+  buildSignedHeaders,
   verify,
 } from "./lib/signature";
 
@@ -13,7 +13,7 @@ const now = Date.parse("2026-06-15T10:00:00Z");
 
 describe("webhook signatures", () => {
   test("accepts a request signed with the shared secret", async () => {
-    const headers = await signedHeaders(secret, body, now);
+    const headers = await buildSignedHeaders(secret, body, now);
     const result = await verify({
       secret,
       body,
@@ -35,7 +35,7 @@ describe("webhook signatures", () => {
   });
 
   test("rejects a tampered body", async () => {
-    const headers = await signedHeaders(secret, body, now);
+    const headers = await buildSignedHeaders(secret, body, now);
     const result = await verify({
       secret,
       body: body.replace("world", "there"),
@@ -47,7 +47,7 @@ describe("webhook signatures", () => {
   });
 
   test("rejects a signature made with another secret", async () => {
-    const headers = await signedHeaders("other-secret", body, now);
+    const headers = await buildSignedHeaders("other-secret", body, now);
     const result = await verify({
       secret,
       body,
@@ -59,7 +59,7 @@ describe("webhook signatures", () => {
   });
 
   test("rejects a replay outside the five minute window", async () => {
-    const headers = await signedHeaders(secret, body, now);
+    const headers = await buildSignedHeaders(secret, body, now);
     const result = await verify({
       secret,
       body,

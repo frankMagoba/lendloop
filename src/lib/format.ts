@@ -1,14 +1,14 @@
 import { ConvexError } from "convex/values";
 
-const dayFormat = new Intl.DateTimeFormat("en-GB", {
+const DAY_FORMAT = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   timeZone: "UTC",
 });
-const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const RELATIVE_TIME = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 export function formatDay(isoDate: string) {
-  return dayFormat.format(new Date(`${isoDate}T00:00:00Z`));
+  return DAY_FORMAT.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
 export function formatRange(startDate: string, endDate: string) {
@@ -22,21 +22,21 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60_000],
 ];
 
-export function timeAgo(timestamp: number, now = Date.now()) {
+export function formatTimeAgo(timestamp: number, now = Date.now()) {
   const elapsed = timestamp - now;
   for (const [unit, ms] of UNITS) {
     if (Math.abs(elapsed) >= ms) {
-      return relative.format(Math.round(elapsed / ms), unit);
+      return RELATIVE_TIME.format(Math.round(elapsed / ms), unit);
     }
   }
   return "just now";
 }
 
-export function localToday() {
+export function getLocalToday() {
   return new Date().toLocaleDateString("en-CA");
 }
 
-export function errorMessage(error: unknown) {
+export function getErrorMessage(error: unknown) {
   if (error instanceof ConvexError && typeof error.data === "string") {
     return error.data;
   }

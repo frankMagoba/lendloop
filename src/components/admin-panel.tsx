@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
-import { timeAgo } from "@/lib/format";
+import { formatTimeAgo } from "@/lib/format";
 import { usePendingAction } from "@/lib/use-pending-action";
 import { useAccountReady } from "@/components/account";
 import { LoanCard } from "@/components/loan-card";
@@ -59,7 +59,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Neighbours() {
   const users = useQuery(api.admin.users);
   const setTrusted = useMutation(api.admin.setTrustedLender);
-  const { pending, error, run } = usePendingAction();
+  const { pending, error, attempt } = usePendingAction();
 
   return (
     <Section title="Neighbours">
@@ -94,7 +94,7 @@ function Neighbours() {
                 }
                 disabled={pending}
                 onClick={() =>
-                  run(() =>
+                  attempt(() =>
                     setTrusted({
                       userId: user._id,
                       trusted: !user.trustedLender,
@@ -141,7 +141,7 @@ function FailedDeliveries() {
             <div>
               <span className="font-medium">{failure.type}</span> after{" "}
               {failure.attempts} attempt{failure.attempts === 1 ? "" : "s"},{" "}
-              {timeAgo(failure._creationTime)}
+              {formatTimeAgo(failure._creationTime)}
               {failure.lastError && (
                 <span className="block text-ink/60">{failure.lastError}</span>
               )}

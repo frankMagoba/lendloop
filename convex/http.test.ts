@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
-import { signedHeaders } from "./lib/signature";
+import { buildSignedHeaders } from "./lib/signature";
 import {
   TODAY,
   createLoan,
@@ -41,7 +41,7 @@ async function overdueLoan(t: TestConvex) {
 async function getOverdue(t: TestConvex, secret = SECRET) {
   return t.fetch("/n8n/overdue-loans", {
     method: "GET",
-    headers: await signedHeaders(secret, ""),
+    headers: await buildSignedHeaders(secret, ""),
   });
 }
 
@@ -51,7 +51,7 @@ async function postEvent(t: TestConvex, event: object) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...(await signedHeaders(SECRET, body)),
+      ...(await buildSignedHeaders(SECRET, body)),
     },
     body,
   });
@@ -200,7 +200,7 @@ describe("POST /n8n/automation-events", () => {
       kind: "overdue_reminder",
       status: "sent",
     });
-    const headers = await signedHeaders(SECRET, body);
+    const headers = await buildSignedHeaders(SECRET, body);
 
     const response = await t.fetch("/n8n/automation-events", {
       method: "POST",

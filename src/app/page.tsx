@@ -5,7 +5,7 @@ import {
 } from "@/components/home-call-to-action";
 import { PublicToolList } from "@/components/public-tool-list";
 
-const steps = [
+const STEPS = [
   {
     icon: PackagePlus,
     title: "List what you own",
@@ -43,7 +43,7 @@ export default function Home() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        {steps.map(({ icon: Icon, title, text }) => (
+        {STEPS.map(({ icon: Icon, title, text }) => (
           <div key={title} className="flex gap-3 rounded-2xl bg-sand/60 p-4">
             <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-moss" />
             <div>

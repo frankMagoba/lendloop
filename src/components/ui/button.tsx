@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-const variants = {
+const VARIANTS = {
   primary: "bg-ink text-white shadow-card hover:bg-ink/88",
   accent: "bg-moss text-white shadow-card hover:bg-moss/90",
   secondary:
@@ -11,7 +11,7 @@ const variants = {
   destructive: "bg-rust text-white shadow-card hover:bg-rust/90",
 } as const;
 
-const sizes = {
+const SIZES = {
   sm: "h-8 px-3 text-[13px]",
   md: "h-10 px-4 text-sm",
   lg: "h-11 px-5 text-[15px]",
@@ -19,8 +19,8 @@ const sizes = {
 } as const;
 
 export type ButtonStyle = {
-  variant?: keyof typeof variants;
-  size?: keyof typeof sizes;
+  variant?: keyof typeof VARIANTS;
+  size?: keyof typeof SIZES;
   className?: string;
 };
 
@@ -33,8 +33,8 @@ export function buttonClass({
     "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl font-medium whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 select-none active:scale-[0.98]",
     "focus-visible:ring-2 focus-visible:ring-moss/40 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:outline-none",
     "disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
-    variants[variant],
-    sizes[size],
+    VARIANTS[variant],
+    SIZES[size],
     className,
   );
 }

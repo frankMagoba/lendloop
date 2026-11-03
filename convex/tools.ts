@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { query } from "./_generated/server";
-import { todayUtc } from "./lib/dates";
+import { getTodayUtc } from "./lib/dates";
 import { userMutation, userQuery } from "./lib/functions";
 import {
   categoryValidator,
@@ -47,7 +47,7 @@ function cleanToolInput<T extends { name: string; description: string }>(
 export const listPublic = query({
   args: {},
   handler: async (ctx) => {
-    const today = todayUtc();
+    const today = getTodayUtc();
     const tools = await ctx.db.query("tools").order("desc").take(PAGE_SIZE);
     const available = [];
     for (const tool of tools.filter(isListed)) {
@@ -67,7 +67,7 @@ export const listPublic = query({
 export const list = userQuery({
   args: { category: v.optional(categoryValidator) },
   handler: async (ctx, { category }) => {
-    const today = todayUtc();
+    const today = getTodayUtc();
     const tools = category
       ? await ctx.db
           .query("tools")
@@ -113,7 +113,7 @@ export const list = userQuery({
 export const mine = userQuery({
   args: {},
   handler: async (ctx) => {
-    const today = todayUtc();
+    const today = getTodayUtc();
     const tools = await ctx.db
       .query("tools")
       .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
@@ -173,7 +173,7 @@ export const remove = userMutation({
       throw new ConvexError("You can only remove your own listings.");
     }
 
-    const today = todayUtc();
+    const today = getTodayUtc();
     const availability = describeAvailability(
       await getApprovedLoans(ctx, toolId),
       today,

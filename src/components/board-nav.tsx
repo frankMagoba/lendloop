@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/cn";
 
-const links = [
+const BOARD_LINKS = [
   { href: "/tools", label: "All tools" },
   { href: "/listings", label: "My listings" },
   { href: "/requests", label: "My requests" },
@@ -19,8 +19,8 @@ export function BoardNav() {
   const me = useQuery(api.users.me);
   const items =
     me?.role === "admin"
-      ? [...links, { href: "/admin", label: "Admin" }]
-      : links;
+      ? [...BOARD_LINKS, { href: "/admin", label: "Admin" }]
+      : BOARD_LINKS;
   const activeLink = useRef<HTMLAnchorElement>(null);
 
   // On phones the nav scrolls sideways, so bring the current tab into view.

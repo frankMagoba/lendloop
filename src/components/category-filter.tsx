@@ -6,7 +6,7 @@ import { CATEGORIES, type Category } from "@/convex/lib/validators";
 import { cn } from "@/lib/cn";
 import { CategoryIcon } from "@/components/category-icon";
 
-const options: [Category | null, string][] = [
+const CATEGORY_OPTIONS: [Category | null, string][] = [
   [null, "All"],
   ...(Object.entries(CATEGORIES) as [Category, string][]),
 ];
@@ -26,7 +26,7 @@ export function CategoryFilter({ selected }: { selected: Category | null }) {
       aria-label="Filter by category"
       className="-mx-4 mb-6 flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
     >
-      {options.map(([value, label]) => (
+      {CATEGORY_OPTIONS.map(([value, label]) => (
         <Link
           key={label}
           ref={selected === value ? selectedChip : undefined}

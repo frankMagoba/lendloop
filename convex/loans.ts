@@ -7,7 +7,7 @@ import {
   daysBetween,
   isIsoDate,
   rangesOverlap,
-  todayUtc,
+  getTodayUtc,
 } from "./lib/dates";
 import { adminQuery, userMutation, userQuery } from "./lib/functions";
 import { LIMITS } from "./lib/validators";
@@ -66,7 +66,7 @@ async function loadLoanView(ctx: QueryCtx, loan: Doc<"loans">) {
     startDate: loan.startDate,
     endDate: loan.endDate,
     status: loan.status,
-    overdue: loan.status === "approved" && loan.endDate < todayUtc(),
+    overdue: loan.status === "approved" && loan.endDate < getTodayUtc(),
     tool: { name: tool?.name ?? "Removed tool", removed: !!tool?.removedAt },
     owner: {
       firstName: owner?.firstName ?? "A neighbour",
@@ -88,7 +88,7 @@ export const request = userMutation({
     if (tool.ownerId === ctx.user._id) {
       throw new ConvexError("You can't borrow your own tool.");
     }
-    validateRange(startDate, endDate, todayUtc());
+    validateRange(startDate, endDate, getTodayUtc());
 
     const pending = await ctx.db
       .query("loans")
@@ -140,7 +140,7 @@ export const approve = userMutation({
     const approved = await getApprovedLoans(ctx, loan.toolId);
     // An overdue loan means the tool is still with someone, whatever its
     // end date says, so nobody else can be promised it yet.
-    if (approved.some((other) => other.endDate < todayUtc())) {
+    if (approved.some((other) => other.endDate < getTodayUtc())) {
       throw new ConvexError(
         "The tool hasn't come back from its last loan. Mark that loan returned first.",
       );

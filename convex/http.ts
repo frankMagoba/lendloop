@@ -3,7 +3,7 @@ import { validate } from "convex-helpers/validators";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { automationEventValidator } from "./automation";
-import { todayUtc } from "./lib/dates";
+import { getTodayUtc } from "./lib/dates";
 import { logEvent } from "./lib/log";
 import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from "./lib/signature";
 
@@ -48,7 +48,7 @@ http.route({
     if (rejection) return rejection;
 
     const loans = await ctx.runQuery(internal.automation.overdueLoans, {
-      today: todayUtc(),
+      today: getTodayUtc(),
     });
     return respondJson({ loans });
   }),

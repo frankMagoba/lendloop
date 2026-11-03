@@ -6,7 +6,7 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { logEvent } from "./lib/log";
-import { signedHeaders } from "./lib/signature";
+import { buildSignedHeaders } from "./lib/signature";
 
 export const MAX_ATTEMPTS = 5;
 const RETRY_DELAYS_MS = [30_000, 120_000, 600_000, 1_800_000];
@@ -73,7 +73,7 @@ export const deliver = internalAction({
         method: "POST",
         headers: {
           "content-type": "application/json",
-          ...(await signedHeaders(secret, body)),
+          ...(await buildSignedHeaders(secret, body)),
         },
         body,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

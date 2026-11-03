@@ -6,11 +6,11 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { daysBetween } from "@/convex/lib/dates";
 import { LIMITS } from "@/convex/lib/validators";
-import { localToday } from "@/lib/format";
+import { getLocalToday } from "@/lib/format";
 import { usePendingAction } from "@/lib/use-pending-action";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogActions } from "@/components/ui/dialog";
-import { Field, FormError, inputClass } from "@/components/ui/field";
+import { Field, FormError, INPUT_CLASS } from "@/components/ui/field";
 
 type RequestedTool = { _id: Id<"tools">; name: string; ownerName: string };
 
@@ -57,15 +57,15 @@ function RequestForm({
   onSent: () => void;
 }) {
   const requestLoan = useMutation(api.loans.request);
-  const { pending, error, run } = usePendingAction();
-  const today = localToday();
+  const { pending, error, attempt } = usePendingAction();
+  const today = getLocalToday();
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const days = daysBetween(startDate, endDate) + 1;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const ok = await run(() =>
+    const ok = await attempt(() =>
       requestLoan({ toolId: tool._id, startDate, endDate }),
     );
     if (ok) onSent();
@@ -84,7 +84,7 @@ function RequestForm({
               setStartDate(event.target.value);
               if (endDate < event.target.value) setEndDate(event.target.value);
             }}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
         </Field>
         <Field label="Until">
@@ -94,7 +94,7 @@ function RequestForm({
             min={startDate}
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
-            className={inputClass}
+            className={INPUT_CLASS}
           />
         </Field>
       </div>

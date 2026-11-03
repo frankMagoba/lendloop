@@ -11,7 +11,7 @@ export function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function todayUtc(now: number = Date.now()): string {
+export function getTodayUtc(now: number = Date.now()): string {
   return toIsoDate(new Date(now));
 }
 

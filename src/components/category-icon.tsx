@@ -11,7 +11,7 @@ import {
 import type { Category } from "@/convex/lib/validators";
 import { cn } from "@/lib/cn";
 
-const icons: Record<Category, LucideIcon> = {
+const CATEGORY_ICONS: Record<Category, LucideIcon> = {
   power_tools: Wrench,
   hand_tools: Hammer,
   garden: Leaf,
@@ -28,7 +28,7 @@ export function CategoryIcon({
   category: Category;
   className?: string;
 }) {
-  const Icon = icons[category];
+  const Icon = CATEGORY_ICONS[category];
   return <Icon aria-hidden className={cn("size-4", className)} />;
 }
 
