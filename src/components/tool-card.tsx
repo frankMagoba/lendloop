@@ -25,14 +25,14 @@ export function ToolCard({
   return (
     <li
       className={cardClass(
-        "flex flex-col p-5 transition-shadow hover:shadow-raised",
+        "flex min-w-0 flex-col p-5 transition-shadow hover:shadow-raised",
       )}
     >
       <div className="flex items-start gap-3">
         <CategoryTile category={tool.category} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="truncate font-semibold">{tool.name}</h2>
+            <h2 className="min-w-0 truncate font-semibold">{tool.name}</h2>
             <AvailabilityBadge availability={tool.availability} />
           </div>
           <p className="mt-0.5 text-[13px] text-ink/55">
@@ -47,7 +47,7 @@ export function ToolCard({
         </p>
       )}
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-line/70 pt-4 [&:not(:first-child)]:mt-4">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line/70 pt-4 [&:not(:first-child)]:mt-4">
         {tool.isMine ? (
           <span className="text-sm text-ink/50">Your listing</span>
         ) : (
@@ -56,7 +56,7 @@ export function ToolCard({
             trusted={tool.owner.trustedLender}
           />
         )}
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1">
           {canRemove && (
             <Button
               variant="danger"

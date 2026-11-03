@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/cn";
 
@@ -20,17 +21,24 @@ export function BoardNav() {
     me?.role === "admin"
       ? [...links, { href: "/admin", label: "Admin" }]
       : links;
+  const activeLink = useRef<HTMLAnchorElement>(null);
+
+  // On phones the nav scrolls sideways, so bring the current tab into view.
+  useEffect(() => {
+    activeLink.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname, items.length]);
 
   return (
     <nav
       aria-label="Board"
-      className="mb-8 flex w-fit max-w-full gap-1 overflow-x-auto rounded-2xl border border-line bg-surface p-1 shadow-card"
+      className="mb-8 flex w-fit max-w-full gap-1 overflow-x-auto [scrollbar-width:none] rounded-2xl border border-line bg-surface p-1 shadow-card"
     >
       {items.map((link) => {
         const active = pathname.startsWith(link.href);
         return (
           <Link
             key={link.href}
+            ref={active ? activeLink : undefined}
             href={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(

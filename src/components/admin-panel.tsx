@@ -69,12 +69,9 @@ function Neighbours() {
       ) : (
         <ul className={cardClass("divide-y divide-line/70")}>
           {users.map((user) => (
-            <li
-              key={user._id}
-              className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5"
-            >
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Avatar name={user.firstName} />
+            <li key={user._id} className="flex items-center gap-3 px-5 py-3.5">
+              <Avatar name={user.firstName} />
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1">
                 <span className="font-medium">{user.firstName}</span>
                 {user.role === "admin" && <Badge>Admin</Badge>}
                 {user.trustedLender && (
@@ -90,6 +87,11 @@ function Neighbours() {
               <Button
                 size="sm"
                 variant={user.trustedLender ? "ghost" : "secondary"}
+                aria-label={
+                  user.trustedLender
+                    ? `Remove trusted lender from ${user.firstName}`
+                    : `Mark ${user.firstName} as a trusted lender`
+                }
                 disabled={pending}
                 onClick={() =>
                   run(() =>
@@ -103,12 +105,12 @@ function Neighbours() {
                 {user.trustedLender ? (
                   <>
                     <ShieldOff aria-hidden />
-                    Remove trusted
+                    <span className="hidden sm:inline">Remove trusted</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck aria-hidden />
-                    Mark trusted
+                    <span className="hidden sm:inline">Mark trusted</span>
                   </>
                 )}
               </Button>

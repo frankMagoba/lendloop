@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { CATEGORIES, type Category } from "@/convex/lib/validators";
 import { cn } from "@/lib/cn";
 import { CategoryIcon } from "@/components/category-icon";
@@ -11,14 +12,24 @@ const options: [Category | null, string][] = [
 ];
 
 export function CategoryFilter({ selected }: { selected: Category | null }) {
+  const selectedChip = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    selectedChip.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [selected]);
+
   return (
     <div
       aria-label="Filter by category"
-      className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+      className="-mx-4 mb-6 flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
     >
       {options.map(([value, label]) => (
         <Link
           key={label}
+          ref={selected === value ? selectedChip : undefined}
           href={value ? `/tools?category=${value}` : "/tools"}
           aria-current={selected === value ? "true" : undefined}
           className={cn(

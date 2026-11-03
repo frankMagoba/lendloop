@@ -2,7 +2,7 @@ import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 
 export const inputClass =
-  "h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink shadow-card transition-[border-color,box-shadow] placeholder:text-ink/35 focus:border-moss/50 focus:ring-4 focus:ring-moss/10 focus:outline-none";
+  "h-10 w-full rounded-xl border border-line bg-surface px-3 text-base text-ink sm:text-sm shadow-card transition-[border-color,box-shadow] placeholder:text-ink/35 focus:border-moss/50 focus:ring-4 focus:ring-moss/10 focus:outline-none";
 
 export const textareaClass = `${inputClass} h-auto resize-none py-2.5`;
 
