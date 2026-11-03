@@ -13,7 +13,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p convex",
     "test": "vitest run",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed:users": "node scripts/seed-users.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.23",

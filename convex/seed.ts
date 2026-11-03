@@ -1,5 +1,7 @@
+import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { addDays, todayUtc } from "./lib/dates";
+import { roleValidator } from "./lib/validators";
 
 // Demo data for local development: `npx convex run seed:demo`.
 // The seeded neighbours have no Clerk account, so nobody can sign in as them.
@@ -71,5 +73,36 @@ export const demo = internalMutation({
     });
 
     return "Seeded 3 neighbours, 5 tools and 2 loans.";
+  },
+});
+
+// Called by scripts/seed-users.mjs after it creates the Clerk accounts, so
+// the test users exist with their role before anyone signs in.
+export const testUsers = internalMutation({
+  args: {
+    users: v.array(
+      v.object({
+        tokenIdentifier: v.string(),
+        firstName: v.string(),
+        email: v.string(),
+        role: roleValidator,
+      }),
+    ),
+  },
+  handler: async (ctx, { users }) => {
+    for (const user of users) {
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("by_token", (q) =>
+          q.eq("tokenIdentifier", user.tokenIdentifier),
+        )
+        .unique();
+      if (existing) {
+        await ctx.db.patch(existing._id, user);
+      } else {
+        await ctx.db.insert("users", { ...user, trustedLender: false });
+      }
+    }
+    return users.length;
   },
 });
